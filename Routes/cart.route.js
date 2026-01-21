@@ -4,6 +4,7 @@ import { addToCart, deleteFromCart, displayAllCartItems, updateCart } from "../c
 
 const cartRouter = Router();
 
+
 cartRouter.route("/addCartItems").post(verifyJwtToken,addToCart);
 cartRouter.route("/updateCartItems").put(verifyJwtToken,updateCart);
 cartRouter.route("/deleteCartItems").delete(verifyJwtToken,deleteFromCart);
