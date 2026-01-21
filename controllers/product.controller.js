@@ -83,14 +83,17 @@ const deleteProduct = asyncHandler(async(req,res)=>{
 
 const fetchAllExistedProducts = asyncHandler(async(req,res)=>{
 
+    const categoryId = req.query.categoryId;
     const page = parseInt(req.query.page);
     const limit = parseInt(req.query.limit);
     const skip = (page - 1) * limit;
 
-    const totalProducts = await Product.countDocuments();
-    console.log("Total Products :-",totalProducts);
+    const query = categoryId ? { category: categoryId } : {};
 
-    const products = await Product.find()
+    const totalProducts = await Product.countDocuments(query)
+    console.log("Total Products in Category :-", totalProducts);
+
+    const products = await Product.find(query)
             .skip(skip)
             .limit(limit);
 

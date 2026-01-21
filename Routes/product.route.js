@@ -15,7 +15,7 @@ productrouter.route("/my-products").get(verifyJwtToken, myProducts);
 
 productrouter.route("/createCategory").post(verifyJwtToken,createCatrgory);
 productrouter.route("/updateCategory/:id").put(verifyJwtToken,updateCategory);
-productrouter.route("/getCategory").get(verifyJwtToken,getCategory);
+productrouter.route("/getCategory").get(getCategory);
 productrouter.route("/deleteCategory/:id").delete(verifyJwtToken,deleteCategory);
 
 export default productrouter;   
