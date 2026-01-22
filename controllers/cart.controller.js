@@ -113,38 +113,35 @@ const updateCart = asyncHandler(async(req,res)=>{
                   .json(new apiResponse(200,cart,"Product Details Updated Sucessfully"));
 });
 
-const deleteFromCart= asyncHandler(async(req,res)=>{
+const deleteFromCart = asyncHandler(async (req, res) => {
 
-    const userId = req.user._id;
+  const userId = req.user._id;
+  const { productId } = req.body;
 
-    const { productId } = req.body;
+  if (!productId) {
+    throw new apiError(400, "ProductId is required");
+  }
 
-    if(!productId){
-        throw new apiError(401,"ProductId Need For Delete The Product");
-    }
+  const cart = await Cart.findOne({ user: userId });
 
-    const cart = await Cart.findOne({ user : userId });
+  if (!cart) {
+    throw new apiError(404, "Cart not found");
+  }
 
-        if(!cart){
-            throw new apiError(401,"Cart Is Not Found..");
-        }
-
-    cart.items = cart.items.filter(item => item.product.toString() !== productId);
-
-    cart.totalAmount = cart.items.reduce(
-        (total, item) => total + item.price * item.quantity,
-            0
+  cart.items = cart.items.filter(
+    item => item.product.toString() !== productId
   );
 
-        if(cart.items.length === 0){
-            throw new apiError(401,"Cart Is Empty..");
-        }
+  cart.totalAmount = cart.items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 
-    await cart.save();
-
-    return res.status(200)
-              .json(new apiResponse(200 , cart , "Item Delete Sucessfully From Cart"));
-
+  await cart.save();
+  
+  return res.status(200)
+            .json(new apiResponse(200, cart, "Item removed successfully")
+  );
 });
 
 const displayAllCartItems = asyncHandler(async(req,res)=>{
