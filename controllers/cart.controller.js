@@ -124,46 +124,40 @@ const addToCart = asyncHandler(async (req, res) => {
   );
 });
 
-const updateCart = asyncHandler(async(req,res)=>{
+const updateCart = asyncHandler(async (req, res) => {
 
-    const userId = req.user._id;
-    const { productId , quantity } = req.body;
+  const userId = req.user._id;
+  const { productId, quantity } = req.body;
 
-    if(!productId && !quantity){
-        throw new apiError(401,"Fill Required Details For Update..");
-    }
+  if (!productId || !quantity) {
+    throw new apiError(400, "Fill Required Details");
+  }
 
-    if(quantity < 1){
-        throw new apiError(41,"Quantity Must be 1..");
-    }
-    
-    const cart = await Cart.findOne({ user : userId });
-    
-        if(!cart){
-            throw new apiError(404,"Cart Not Found..");
-        }
+  if (quantity < 1) {
+    throw new apiError(400, "Quantity must be >= 1");
+  }
 
-        const item = cart.items.find(
-            item => item.product.toString() === productId,
-        );
-        //console.log("items :- ",item);
+  const cart = await Cart.findOneAndUpdate(
+    {
+      user: userId,
+      "items.product": productId,
+    },
+    {
+      $set: {
+        "items.$.quantity": quantity,
+        "items.$.itemTotal": { $multiply: ["$items.$.price", quantity] }
+      }
+    },
+    { new: true }
+  );
 
-            if(!item){
-                throw new apiError(404,"Product is Not Found In Cart..");
-            }
-        
-        item.quantity = quantity;
+  if (!cart) {
+    throw new apiError(404, "Product not found in cart");
+  }
 
-        cart.totalAmount = cart.items.reduce(
-            (total, item) => total + item.price * item.quantity,
-                0
-        );
-
-        const finalCart = await cart.save();
-        //console.log("FInal Cart" , finalCart);
-
-        return res.status(200)
-                  .json(new apiResponse(200,cart,"Product Details Updated Sucessfully"));
+  return res
+    .status(200)
+    .json(new apiResponse(200, cart, "Cart updated successfully"));
 });
 
 const deleteFromCart = asyncHandler(async (req, res) => {
