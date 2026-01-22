@@ -201,7 +201,7 @@ const displayAllCartItems = asyncHandler(async(req,res)=>{
 
     const userId = req.user._id;
 
-    const cart = await Cart.findOne({ user : userId }).populate("items.product", "name price image")
+    const cart = await Cart.findOne({ user : userId }).populate("items.product", "name price productImage")
 
         if(!cart){
             throw new apiError(401,"Cart Is Empty..");
