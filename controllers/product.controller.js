@@ -151,9 +151,13 @@ const myProducts = asyncHandler(async(req,res)=>{
 
 const createCatrgory = asyncHandler(async(req,res)=>{
 
-    const  { name , description }  = req.body;
+    if (req.user.role !== "admin") {
+        throw new apiError(403, "Only admin can create category");
+    }
 
-        if(!name || !description){
+    const  { name , description , priority }  = req.body;
+
+        if(!name || !description || !priority){
             throw new apiError(401,"Fill Every Fields..");
         }
     
@@ -166,6 +170,7 @@ const createCatrgory = asyncHandler(async(req,res)=>{
     const category = await Category.create({
         name : name.trim(), 
         description : description.trim(),
+        priority : priority || 0,
     });
     console.log("Created Category Is :-",category);
     
@@ -173,27 +178,43 @@ const createCatrgory = asyncHandler(async(req,res)=>{
               .json(new apiResponse(201,category,"Category Created Sucessfully.."))
 });
 
-const updateCategory = asyncHandler(async(req,res)=>{
+const updateCategory = asyncHandler(async (req, res) => {
 
-    const { id } = req.params;
-    const  updates  = req.body;
+    if (req.user.role !== "admin") {
+        throw new apiError(403, "Only admin can create category");
+    }
 
-   const updatedCategory = await Category.findByIdAndUpdate(
+  const { id } = req.params;
+  const { name, description, priority } = req.body;
+
+  const updates = {};
+
+  if (name) updates.name = name.trim();
+  if (description) updates.description = description.trim();
+  if (priority !== undefined) updates.priority = priority;
+
+  const updatedCategory = await Category.findByIdAndUpdate(
     id,
     updates,
-    { new: true }
+    { new: true } 
   );
 
   if (!updatedCategory) {
-    throw new apiError(404, "Category Is Not Found");
+    throw new apiError(404, "Category not found");
   }
-  return res.status(201)
-            .json(new apiResponse (201, updatedCategory , "Category Updated Sucessfully.."));
+
+  return res.status(200).json(
+    new apiResponse(200, updatedCategory, "Category updated successfully")
+  );
 });
 
 const getCategory = asyncHandler(async(req,res)=>{
 
-    const categories = await Category.find();
+    //  if (req.user.role !== "admin") {
+    //     throw new apiError(403, "Only admin can create category");
+    // }
+
+    const categories = await Category.find().sort({ priority: -1, createdAt: 1 });
     console.log("Categories Are :- ",categories);
 
     return res.status(201)
@@ -201,6 +222,10 @@ const getCategory = asyncHandler(async(req,res)=>{
 });
 
 const deleteCategory = asyncHandler(async(req,res)=>{
+
+     if (req.user.role !== "admin") {
+        throw new apiError(403, "Only admin can create category");
+     }
 
     const { id } = req.params;
 

@@ -15,6 +15,11 @@ const categorySchema = new Schema({
         required:true, 
         trim : true, 
     },
+
+    priority :{
+        type:Number,
+        default:0,
+    },
     
 },    
     {timestamps:true})
