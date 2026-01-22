@@ -26,7 +26,7 @@ const verifyProductOwner = asyncHandler(async (req, res, next) => {
     next();
 
   } catch (error) {
-    return res.status(401)
+    return res.status(401)  
               .json(new apiResponse(401, "Invalid or Unauthorized"));
   }
 });

@@ -157,7 +157,7 @@ const createCatrgory = asyncHandler(async(req,res)=>{
 
     const  { name , description , priority }  = req.body;
 
-        if(!name || !description || !priority){
+        if(!name || !description || priority === undefined){
             throw new apiError(401,"Fill Every Fields..");
         }
     
@@ -170,7 +170,8 @@ const createCatrgory = asyncHandler(async(req,res)=>{
     const category = await Category.create({
         name : name.trim(), 
         description : description.trim(),
-        priority : priority || 0,
+        priority: parseInt(priority),
+
     });
     console.log("Created Category Is :-",category);
     
@@ -214,7 +215,7 @@ const getCategory = asyncHandler(async(req,res)=>{
     //     throw new apiError(403, "Only admin can create category");
     // }
 
-    const categories = await Category.find().sort({ priority: -1, createdAt: 1 });
+    const categories = await Category.find().sort({ priority: 1, createdAt: 1 });
     console.log("Categories Are :- ",categories);
 
     return res.status(201)
