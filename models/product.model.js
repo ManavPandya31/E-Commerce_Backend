@@ -42,4 +42,6 @@ const productSchema = new Schema({
 
 );
 
+// productSchema.index({ _id: 1 });
+
 export const Product = mongoose.model("Product",productSchema);

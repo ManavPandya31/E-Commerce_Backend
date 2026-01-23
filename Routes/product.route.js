@@ -3,6 +3,7 @@ import { addProduct, deleteProduct, fetchAllExistedProducts, getSingleProduct, u
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJwtToken } from "../middlewares/auth.middleware.js";
 import { verifyProductOwner } from "../middlewares/productOwner.middleware.js";
+import { verifyAdmin } from "../middlewares/admin.middleware.js";
 
 const productrouter = Router();
 
@@ -13,9 +14,9 @@ productrouter.route("/showAllProducts").get(fetchAllExistedProducts);
 productrouter.route("/findSingleProduct/:id").get(getSingleProduct);
 productrouter.route("/my-products").get(verifyJwtToken, myProducts);
 
-productrouter.route("/createCategory").post(verifyJwtToken,createCatrgory);
-productrouter.route("/updateCategory/:id").put(verifyJwtToken,updateCategory);
-productrouter.route("/getCategory").get(verifyJwtToken,getCategory);
-productrouter.route("/deleteCategory/:id").delete(verifyJwtToken,deleteCategory);
+productrouter.route("/createCategory").post(verifyJwtToken,verifyAdmin,createCatrgory);
+productrouter.route("/updateCategory/:id").put(verifyJwtToken,verifyAdmin,updateCategory);
+productrouter.route("/getCategory").get(getCategory);
+productrouter.route("/deleteCategory/:id").delete(verifyJwtToken,verifyAdmin,deleteCategory);
 
 export default productrouter;   

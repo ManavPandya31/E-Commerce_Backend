@@ -37,4 +37,10 @@ const cartSchema = new Schema({
     { timestamps : true },
 );
 
+cartSchema.index({ user: 1 });
+
+cartSchema.index({ "items.product": 1 });
+
+// cartSchema.index({ user: 1 }, { unique: true });
+
 export const Cart = mongoose.model("Cart",cartSchema);
