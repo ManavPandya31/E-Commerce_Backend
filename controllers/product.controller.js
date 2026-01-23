@@ -167,6 +167,10 @@ const createCatrgory = asyncHandler(async(req,res)=>{
         throw new apiError(401,"Category Is Already Existed..");
     }
 
+    if (!Number.isInteger(priority) || priority < 1) {
+        throw new apiError(400, "Priority must start from 1");
+    }
+
     const category = await Category.create({
         name : name.trim(), 
         description : description.trim(),
@@ -215,7 +219,7 @@ const getCategory = asyncHandler(async(req,res)=>{
     //     throw new apiError(403, "Only admin can create category");
     // }
 
-    const categories = await Category.find().sort({ priority: 1, createdAt: 1 });
+    const categories = await Category.find().sort({ priority: 1, createdAt: 1 }).lean();
     console.log("Categories Are :- ",categories);
 
     return res.status(201)

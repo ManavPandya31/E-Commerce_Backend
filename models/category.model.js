@@ -18,7 +18,10 @@ const categorySchema = new Schema({
 
     priority :{
         type:Number,
-        default:0,
+        required : true,
+        min : 1,
+        default: 999,
+        index : true,
     },
     
 },    
