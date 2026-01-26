@@ -4,7 +4,7 @@ import { apiResponse } from "../Utils/apiResponse.js";
 import { apiError } from "../Utils/apiError.js";
 import { uploadOnCloudinary } from "../Utils/cloudinary.js";
 import { Category } from "../models/category.model.js";
-import mongoose from "mongoose";
+// import mongoose from "mongoose";
 
 const addProduct = asyncHandler(async(req,res)=>{
 
@@ -248,26 +248,26 @@ const deleteCategory = asyncHandler(async(req,res)=>{
               .json(new apiResponse(201,deleteCategory,"Category Deleted Sucessfully"));
 });
 
-const getProductWithProviderDetails = asyncHandler(async(req,res)=>{
+// const getProductWithProviderDetails = asyncHandler(async(req,res)=>{
 
-    const { id } = req.params;
+//     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new apiError(400, "Invalid product ID");
-  }
+//     if (!mongoose.Types.ObjectId.isValid(id)) {
+//     throw new apiError(400, "Invalid product ID");
+//   }
 
-    const product = await Product.findById(id).populate("provider","name email phone");
-    console.log("Product from DB:", product);
+//     const product = await Product.findById(id).populate("provider","name email phone");
+//     console.log("Product from DB:", product);
     
-    if(!product){
-        throw new apiError(401,"Product Is Not Found..");
-    }
+//     if(!product){
+//         throw new apiError(401,"Product Is Not Found..");
+//     }
 
-    return res.status(200)
-              .json(new apiResponse(201,product,"Provider Details fetch Sucessfully.."))
+//     return res.status(200)
+//               .json(new apiResponse(201,product,"Provider Details fetch Sucessfully.."))
 
-});
+// });
 
 export { addProduct , updateProduct , deleteProduct , fetchAllExistedProducts ,
 getSingleProduct , myProducts , createCatrgory , updateCategory , getCategory , 
-deleteCategory , getProductWithProviderDetails};
+deleteCategory};
