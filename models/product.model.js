@@ -34,6 +34,12 @@ const productSchema = new Schema({
         type : mongoose.Schema.Types.ObjectId,
         ref : "User",
         required : true,
+   },
+
+   provider : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "User",
+        required : true,
    }
     
 },
