@@ -4,7 +4,6 @@ import { apiResponse } from "../Utils/apiResponse.js";
 import { apiError } from "../Utils/apiError.js";
 import { uploadOnCloudinary } from "../Utils/cloudinary.js";
 import { Category } from "../models/category.model.js";
-// import mongoose from "mongoose";
 
 const addProduct = asyncHandler(async(req,res)=>{
 
@@ -94,7 +93,9 @@ const fetchAllExistedProducts = asyncHandler(async(req,res)=>{
     const totalProducts = await Product.countDocuments(query)
     console.log("Total Products in Category :-", totalProducts);
 
-    const products = await Product.find(query)
+    const products = await Product.find(query).populate({
+            path: "userId",
+            select: "fullName email phoneNumber role gender"})
             .skip(skip)
             .limit(limit);
 
@@ -214,17 +215,36 @@ const updateCategory = asyncHandler(async (req, res) => {
   );
 });
 
-const getCategory = asyncHandler(async(req,res)=>{
+const getCategory = asyncHandler(async (req, res) => {
 
-    //  if (req.user.role !== "admin") {
-    //     throw new apiError(403, "Only admin can create category");
-    // }
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const skip = (page - 1) * limit;
 
-    const categories = await Category.find().sort({ priority: 1, createdAt: 1 }).lean();
-    console.log("Categories Are :- ",categories);
+  const totalCategories = await Category.countDocuments();
 
-    return res.status(201)
-              .json(new apiResponse(201,categories,"All Categories Fetch Sucessfully.."))
+  const categories = await Category.find()
+    .sort({ priority: 1, createdAt: 1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  console.log("Categories Are :- ", categories);
+
+  return res.status(200).json(
+    new apiResponse(
+      200,
+      {
+        categories,
+        pageData: {
+          currentPage: page,
+          totalCategories,
+          totalPages: Math.ceil(totalCategories / limit),
+        },
+      },
+      "All Categories Fetched Successfully"
+    )
+  );
 });
 
 const deleteCategory = asyncHandler(async(req,res)=>{
@@ -247,26 +267,6 @@ const deleteCategory = asyncHandler(async(req,res)=>{
     return res.status(201)
               .json(new apiResponse(201,deleteCategory,"Category Deleted Sucessfully"));
 });
-
-// const getProductWithProviderDetails = asyncHandler(async(req,res)=>{
-
-//     const { id } = req.params;
-
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//     throw new apiError(400, "Invalid product ID");
-//   }
-
-//     const product = await Product.findById(id).populate("provider","name email phone");
-//     console.log("Product from DB:", product);
-    
-//     if(!product){
-//         throw new apiError(401,"Product Is Not Found..");
-//     }
-
-//     return res.status(200)
-//               .json(new apiResponse(201,product,"Provider Details fetch Sucessfully.."))
-
-// });
 
 export { addProduct , updateProduct , deleteProduct , fetchAllExistedProducts ,
 getSingleProduct , myProducts , createCatrgory , updateCategory , getCategory , 
