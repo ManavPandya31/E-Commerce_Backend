@@ -195,7 +195,7 @@ const displayAllCartItems = asyncHandler(async(req,res)=>{
 
     const userId = req.user._id;
 
-    const cart = await Cart.findOne({ user : userId }).populate("items.product", "name price productImage")
+    const cart = await Cart.findOne({ user : userId }).populate("items.product", "name price finalPrice productImage")
 
         if(!cart){
             throw new apiError(401,"Cart Is Empty..");
@@ -205,4 +205,34 @@ const displayAllCartItems = asyncHandler(async(req,res)=>{
                   .json(new apiResponse(200 , cart , "All Cart Itrems.."));
 });
 
-export { addToCart , updateCart , deleteFromCart , displayAllCartItems};
+const searchBar = asyncHandler(async (req, res) => {
+  const { q } = req.query;
+
+  if (!q) {
+    throw new apiError(200, "Search Query Is Empty..");
+  }
+
+  // Handle plural by removing trailing 's' optionally
+  const normalizedQuery = q.endsWith("s") ? q.slice(0, -1) : q;
+  const searchRegex = new RegExp(normalizedQuery, "i");
+
+  const priceQuery = !isNaN(q) ? { price: Number(q) } : null;
+
+  const conditions = [
+    { name: { $regex: searchRegex } },
+    { description: { $regex: searchRegex } },
+    { "categories.name": { $regex: searchRegex } },
+  ];
+
+  if (priceQuery) conditions.push(priceQuery);
+
+  const products = await Product.find({
+    $or: conditions,
+  })
+    .select("name price categories")
+    .limit(20);
+
+  return res.status(200).json(new apiResponse(200, products, "Search Results.."));
+});
+
+export { addToCart , updateCart , deleteFromCart , displayAllCartItems , searchBar};
