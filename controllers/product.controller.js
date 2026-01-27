@@ -7,7 +7,7 @@ import { Category } from "../models/category.model.js";
 
 const addProduct = asyncHandler(async(req,res)=>{
 
-        const {name , description , price , category , stock } = req.body;
+        const {name , description , price , category , stock , discountType, discountValue} = req.body;
 
         //console.log("Req Body :- ",req.body);
 
@@ -19,11 +19,31 @@ const addProduct = asyncHandler(async(req,res)=>{
             throw new apiError(401,"Product Image Is Required..");
         }
 
+        if ((discountType || discountValue) && req.user.role !== "provider") {
+             throw new apiError(403, "Only providers can apply discounts");
+        }
+
         const uploadImageOnCloudinary = await uploadOnCloudinary(req.file.buffer);
 
         if(!uploadImageOnCloudinary){
             throw new apiError(400,"Image Upload Failed On Cloudinary..");
         }
+
+        
+    let finalPrice = price;
+
+    if (discountType && discountValue > 0) {
+
+        if (discountType === "Percetange") {
+            finalPrice = price - (price * discountValue) / 100;
+        }
+
+        if (discountType === "Flat") {
+            finalPrice = price - discountValue;
+        }
+
+        if (finalPrice < 0) finalPrice = 0;
+    }
         
         //Product Creation,
         const product = await Product.create({
@@ -32,6 +52,11 @@ const addProduct = asyncHandler(async(req,res)=>{
             price,
             category,
             stock,
+            discount: {
+            type: discountType || null,
+            value: discountValue || 0,
+            },
+            finalPrice,
             productImage: uploadImageOnCloudinary.secure_url,
             userId: req.user._id,
         });
@@ -139,7 +164,8 @@ const myProducts = asyncHandler(async(req,res)=>{
 
     const userId = req.user._id;
 
-      const products = await Product.find({userId}).populate("category");;
+      const products = await Product.find({userId}).populate("category")
+      .select("name price finalPrice stock productImage discount");
 
       if(!products){
         throw new apiError(404, "Products Is Not Found..");

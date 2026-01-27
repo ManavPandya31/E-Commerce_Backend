@@ -35,6 +35,23 @@ const productSchema = new Schema({
         ref : "User",
         required : true,
    },
+   
+   discount : {
+         type: {
+            type: String,   
+            enum: ["Percetange", "Flat"],
+            default: null,
+    },
+  
+          value: {
+             type: Number,
+             default: 0,
+    },
+},
+
+    finalPrice: {
+         type: Number,
+}
     
 },
     
