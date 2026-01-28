@@ -98,4 +98,106 @@ const loginUser = asyncHandler(async(req,res)=>{
 
 });
 
-export { userRegister , loginUser , accessAndRefreshTokens };
+const userDetails = asyncHandler(async(req,res)=>{
+
+    const user = req.user;
+
+    if(!user){
+        throw new apiError(201,"Unauthorized!");
+    }
+
+    const eUser = await User.findById(user).select("fullName");
+
+    if(!eUser){
+        throw new apiError(201,"Invalid User!");
+    }
+
+    return res.status(200)
+              .json(new apiResponse(200,user,"Profile Fetch Suces"))
+
+});
+
+const addAddress = asyncHandler(async(req,res)=>{
+    
+    const userId = req.user._id;
+    const newAddress = req.body;
+
+    if (newAddress.isDefault) {
+      await User.updateOne(
+        { _id: userId },
+        { $set: { "addresses.$[].isDefault": false } }
+      );
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $push: { addresses: newAddress } },
+      { new: true }
+    );
+
+    return res.status(200)
+              .json(new apiResponse(200,user,"Address Added Sucessfully."))
+});
+
+const getAllAddress = asyncHandler(async(req,res)=>{
+    
+    //const user =  req.user;
+    const user = await User.findById(req.user._id).select("addresses");
+
+    return res.status(200)
+              .json(new apiResponse(200,user,"Address Fetch Sucessfully"))
+});
+
+const updateAddress = asyncHandler(async (req, res) => {
+
+  const { addressId } = req.params;
+  const userId = req.user._id;
+
+  console.log("Address Id", addressId);
+  
+
+  if (req.body.isDefault) {
+    await User.updateOne(
+      { _id: userId },
+      { $set: { "addresses.$[].isDefault": false } }
+    );
+  }
+
+  // build safe update object
+  const updateFields = {};
+  for (const key in req.body) {
+    updateFields[`addresses.$.${key}`] = req.body[key];
+  }
+
+  const user = await User.findOneAndUpdate(
+    { _id: userId, "addresses._id": addressId },
+    { $set: updateFields },
+    { new: true }
+  );
+
+  if (!user) {
+    throw new apiError(404, "Address not found");
+  }
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "Address Updated Successfully"));
+});
+
+const deleteAddress = asyncHandler(async (req, res) => {
+
+  const userId = req.user._id;
+  const { addressId } = req.params;
+
+  await User.findByIdAndUpdate(
+    userId,
+    { $pull: { addresses: { _id: addressId } } },
+    { new: true }
+  );
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, null, "Address Deleted Successfully"));
+});
+
+export { userRegister , loginUser , accessAndRefreshTokens , userDetails , addAddress , getAllAddress , updateAddress , deleteAddress};

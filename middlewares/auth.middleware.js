@@ -6,7 +6,7 @@ import { apiResponse } from "../Utils/apiResponse.js";
 
 const verifyJwtToken = asyncHandler(async(req,res,next)=>{
     
-    try {
+    try {   
 
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
        // console.log("Authorization:", req.headers.authorization);

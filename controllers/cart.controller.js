@@ -3,6 +3,7 @@ import { Product } from "../models/product.model.js";
 import { apiError } from "../Utils/apiError.js";
 import { apiResponse } from "../Utils/apiResponse.js";
 import { asyncHandler } from "../Utils/asyncHandler.js";
+import { Category } from "../models/category.model.js";
 
 // const addToCart = asyncHandler(async(req,res)=>{
 
@@ -195,7 +196,7 @@ const displayAllCartItems = asyncHandler(async(req,res)=>{
 
     const userId = req.user._id;
 
-    const cart = await Cart.findOne({ user : userId }).populate("items.product", "name price productImage")
+    const cart = await Cart.findOne({ user : userId }).populate("items.product", "name price finalPrice productImage")
 
         if(!cart){
             throw new apiError(401,"Cart Is Empty..");
@@ -205,4 +206,53 @@ const displayAllCartItems = asyncHandler(async(req,res)=>{
                   .json(new apiResponse(200 , cart , "All Cart Itrems.."));
 });
 
-export { addToCart , updateCart , deleteFromCart , displayAllCartItems};
+const searchBar = asyncHandler(async (req, res) => {
+  const { q } = req.query;
+
+  if (!q || q.trim() === "") {
+    return res.status(200).json(new apiResponse(200, { categories: [], products: [] }, "Empty query"));
+  }
+
+  const rawText = q.trim();
+  const keywords = rawText.split(/\s+/).filter(Boolean);
+
+  const categories = await Category.find({
+    $and: keywords.map(word => ({
+      name: { $regex: word, $options: "i" }
+    }))
+  }).limit(4);
+
+  const products = await Product.find({
+    $and: keywords.map(word => ({
+      $or: [
+        { name: { $regex: word, $options: "i" } },
+        { description: { $regex: word, $options: "i" } }
+      ]
+    }))
+  })
+  .select("name productImage price category")
+  .populate("category", "name")
+  .limit(10);
+
+  const suggestions = {
+    
+    categories: categories.map(cat => ({
+      _id: cat._id,
+      name: cat.name,
+      type: "category"
+    })),
+
+    products: products.map(prod => ({
+      _id: prod._id,
+      name: prod.name,
+      categoryName: prod.category?.name,
+      image: prod.productImage,
+      type: "product"
+    }))
+  };
+
+  return res.status(200)
+            .json(new apiResponse(200, suggestions, "Search suggestions fetched"));
+});
+
+export { addToCart , updateCart , deleteFromCart , displayAllCartItems , searchBar};

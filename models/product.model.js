@@ -34,7 +34,24 @@ const productSchema = new Schema({
         type : mongoose.Schema.Types.ObjectId,
         ref : "User",
         required : true,
-   }
+   },
+   
+   discount : {
+         type: {
+            type: String,   
+            enum: ["Percetange", "Flat"],
+            default: null,
+    },
+  
+          value: {
+             type: Number,
+             default: 0,
+    },
+},
+
+    finalPrice: {
+         type: Number,
+}
     
 },
     

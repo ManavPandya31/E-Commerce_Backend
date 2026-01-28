@@ -2,6 +2,62 @@ import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+const addressSchema = new Schema(
+  {
+    // fullName: {
+    //   type: String,
+    //   required: true
+    // },
+
+    mobile: {
+      type: String,
+      required: true
+    },
+
+    alternatePhone: { 
+        type: String,
+         default: "" 
+    },
+
+    street: {
+      type: String,
+      required: true
+    },
+
+    city: {
+      type: String,
+      required: true
+    },
+
+    state: {
+      type: String,
+      required: true
+    },
+
+    pincode: {
+      type: String,
+      required: true
+    },
+
+    country: {
+      type: String,
+      default: "India"
+    },
+
+    addressType: {
+      type: String,
+      enum: ["Home", "Work"],
+      default: "Home"
+    },
+
+    isDefault: {
+      type: Boolean,
+      default: false
+    }
+  },
+  { _id: true }
+);
+
 const userSchema = new Schema({
     fullName : {
         type : String,
@@ -38,8 +94,10 @@ const userSchema = new Schema({
     refreshToken : {
         type : String,
     },
+
+     addresses: [addressSchema] 
 },
-    
+
     {timestamps : true}
 );
 

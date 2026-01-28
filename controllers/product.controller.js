@@ -7,7 +7,7 @@ import { Category } from "../models/category.model.js";
 
 const addProduct = asyncHandler(async(req,res)=>{
 
-        const {name , description , price , category , stock } = req.body;
+        const {name , description , price , category , stock , discountType, discountValue} = req.body;
 
         //console.log("Req Body :- ",req.body);
 
@@ -19,11 +19,31 @@ const addProduct = asyncHandler(async(req,res)=>{
             throw new apiError(401,"Product Image Is Required..");
         }
 
+        if ((discountType || discountValue) && req.user.role !== "provider") {
+             throw new apiError(403, "Only providers can apply discounts");
+        }
+
         const uploadImageOnCloudinary = await uploadOnCloudinary(req.file.buffer);
 
         if(!uploadImageOnCloudinary){
             throw new apiError(400,"Image Upload Failed On Cloudinary..");
         }
+
+        
+    let finalPrice = price;
+
+    if (discountType && discountValue > 0) {
+
+        if (discountType === "Percetange") {
+            finalPrice = price - (price * discountValue) / 100;
+        }
+
+        if (discountType === "Flat") {
+            finalPrice = price - discountValue;
+        }
+
+        if (finalPrice < 0) finalPrice = 0;
+    }
         
         //Product Creation,
         const product = await Product.create({
@@ -32,6 +52,11 @@ const addProduct = asyncHandler(async(req,res)=>{
             price,
             category,
             stock,
+            discount: {
+            type: discountType || null,
+            value: discountValue || 0,
+            },
+            finalPrice,
             productImage: uploadImageOnCloudinary.secure_url,
             userId: req.user._id,
         });
@@ -93,7 +118,9 @@ const fetchAllExistedProducts = asyncHandler(async(req,res)=>{
     const totalProducts = await Product.countDocuments(query)
     console.log("Total Products in Category :-", totalProducts);
 
-    const products = await Product.find(query)
+    const products = await Product.find(query).populate({
+            path: "userId",
+            select: "fullName email phoneNumber role gender"})
             .skip(skip)
             .limit(limit);
 
@@ -137,7 +164,8 @@ const myProducts = asyncHandler(async(req,res)=>{
 
     const userId = req.user._id;
 
-      const products = await Product.find({userId}).populate("category");;
+      const products = await Product.find({userId}).populate("category")
+      .select("name price finalPrice stock productImage discount");
 
       if(!products){
         throw new apiError(404, "Products Is Not Found..");
@@ -213,17 +241,36 @@ const updateCategory = asyncHandler(async (req, res) => {
   );
 });
 
-const getCategory = asyncHandler(async(req,res)=>{
+const getCategory = asyncHandler(async (req, res) => {
 
-    //  if (req.user.role !== "admin") {
-    //     throw new apiError(403, "Only admin can create category");
-    // }
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const skip = (page - 1) * limit;
 
-    const categories = await Category.find().sort({ priority: 1, createdAt: 1 }).lean();
-    console.log("Categories Are :- ",categories);
+  const totalCategories = await Category.countDocuments();
 
-    return res.status(201)
-              .json(new apiResponse(201,categories,"All Categories Fetch Sucessfully.."))
+  const categories = await Category.find()
+    .sort({ priority: 1, createdAt: 1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  console.log("Categories Are :- ", categories);
+
+  return res.status(200).json(
+    new apiResponse(
+      200,
+      {
+        categories,
+        pageData: {
+          currentPage: page,
+          totalCategories,
+          totalPages: Math.ceil(totalCategories / limit),
+        },
+      },
+      "All Categories Fetched Successfully"
+    )
+  );
 });
 
 const deleteCategory = asyncHandler(async(req,res)=>{
@@ -245,7 +292,7 @@ const deleteCategory = asyncHandler(async(req,res)=>{
     
     return res.status(201)
               .json(new apiResponse(201,deleteCategory,"Category Deleted Sucessfully"));
-})
+});
 
 export { addProduct , updateProduct , deleteProduct , fetchAllExistedProducts ,
 getSingleProduct , myProducts , createCatrgory , updateCategory , getCategory , 

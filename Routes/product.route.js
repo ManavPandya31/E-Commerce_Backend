@@ -13,6 +13,7 @@ productrouter.route("/deleteProduct/:id").delete(verifyJwtToken,verifyProductOwn
 productrouter.route("/showAllProducts").get(fetchAllExistedProducts);
 productrouter.route("/findSingleProduct/:id").get(getSingleProduct);
 productrouter.route("/my-products").get(verifyJwtToken, myProducts);
+// productrouter.route("/getProductWithProvidersDetails/:id").get(verifyJwtToken, getProductWithProviderDetails);
 
 productrouter.route("/createCategory").post(verifyJwtToken,verifyAdmin,createCatrgory);
 productrouter.route("/updateCategory/:id").put(verifyJwtToken,verifyAdmin,updateCategory);
