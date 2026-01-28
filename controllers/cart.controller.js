@@ -251,7 +251,8 @@ const searchBar = asyncHandler(async (req, res) => {
     }))
   };
 
-  return res.status(200).json(new apiResponse(200, suggestions, "Search suggestions fetched"));
+  return res.status(200)
+            .json(new apiResponse(200, suggestions, "Search suggestions fetched"));
 });
 
 export { addToCart , updateCart , deleteFromCart , displayAllCartItems , searchBar};
