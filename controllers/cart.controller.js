@@ -3,6 +3,7 @@ import { Product } from "../models/product.model.js";
 import { apiError } from "../Utils/apiError.js";
 import { apiResponse } from "../Utils/apiResponse.js";
 import { asyncHandler } from "../Utils/asyncHandler.js";
+import { Category } from "../models/category.model.js";
 
 // const addToCart = asyncHandler(async(req,res)=>{
 
@@ -208,31 +209,49 @@ const displayAllCartItems = asyncHandler(async(req,res)=>{
 const searchBar = asyncHandler(async (req, res) => {
   const { q } = req.query;
 
-  if (!q) {
-    throw new apiError(200, "Search Query Is Empty..");
+  if (!q || q.trim() === "") {
+    return res.status(200).json(new apiResponse(200, { categories: [], products: [] }, "Empty query"));
   }
 
-  // Handle plural by removing trailing 's' optionally
-  const normalizedQuery = q.endsWith("s") ? q.slice(0, -1) : q;
-  const searchRegex = new RegExp(normalizedQuery, "i");
+  const rawText = q.trim();
+  const keywords = rawText.split(/\s+/).filter(Boolean);
 
-  const priceQuery = !isNaN(q) ? { price: Number(q) } : null;
-
-  const conditions = [
-    { name: { $regex: searchRegex } },
-    { description: { $regex: searchRegex } },
-    { "categories.name": { $regex: searchRegex } },
-  ];
-
-  if (priceQuery) conditions.push(priceQuery);
+  const categories = await Category.find({
+    $and: keywords.map(word => ({
+      name: { $regex: word, $options: "i" }
+    }))
+  }).limit(4);
 
   const products = await Product.find({
-    $or: conditions,
+    $and: keywords.map(word => ({
+      $or: [
+        { name: { $regex: word, $options: "i" } },
+        { description: { $regex: word, $options: "i" } }
+      ]
+    }))
   })
-    .select("name price categories")
-    .limit(20);
+  .select("name productImage price category")
+  .populate("category", "name")
+  .limit(10);
 
-  return res.status(200).json(new apiResponse(200, products, "Search Results.."));
+  const suggestions = {
+    
+    categories: categories.map(cat => ({
+      _id: cat._id,
+      name: cat.name,
+      type: "category"
+    })),
+
+    products: products.map(prod => ({
+      _id: prod._id,
+      name: prod.name,
+      categoryName: prod.category?.name,
+      image: prod.productImage,
+      type: "product"
+    }))
+  };
+
+  return res.status(200).json(new apiResponse(200, suggestions, "Search suggestions fetched"));
 });
 
 export { addToCart , updateCart , deleteFromCart , displayAllCartItems , searchBar};
