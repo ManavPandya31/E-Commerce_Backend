@@ -34,7 +34,7 @@ const createOrder = asyncHandler(async(req,res)=>{
         products: products.map(p => ({
             product: p.product,
             quantity: p.quantity,
-            // price: p.price
+            price: p.price
         })),
         address: address,
         totalAmount,
