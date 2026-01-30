@@ -16,6 +16,10 @@ const cartItemSchma = new Schema({
         type : Number,
         required : true,
     },
+    finalPrice: {
+        type: Number,
+        required: true,
+    }
 },
     
 {timestamps : true});

@@ -20,6 +20,8 @@ const createOrder = asyncHandler(async(req,res)=>{
         throw new apiError(400,"Address Is Not Found..!");
     }
 
+    address.addressType = address.addressType?.toUpperCase();
+
     let totalAmount = 0;
 
     for (let item of products) {
