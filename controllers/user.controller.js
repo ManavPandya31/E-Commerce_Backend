@@ -28,6 +28,7 @@ const accessAndRefreshTokens = async(userId)=>{
 };
 
 const userRegister = asyncHandler(async(req,res)=>{
+  
     const { fullName , email , password , phoneNumber , gender } = req.body;
     
     const role  = req.params.role || req.query.role;
