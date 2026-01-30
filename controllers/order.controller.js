@@ -20,6 +20,8 @@ const createOrder = asyncHandler(async(req,res)=>{
         throw new apiError(400,"Address Is Not Found..!");
     }
 
+    address.addressType = address.addressType?.toUpperCase();
+
     let totalAmount = 0;
 
     for (let item of products) {
@@ -40,6 +42,12 @@ const createOrder = asyncHandler(async(req,res)=>{
         totalAmount,
     });
 
+    for (let item of products) {
+        await Product.findByIdAndUpdate(item.product, {
+            $inc: { stock: -item.quantity }
+        });
+    }
+
     return res.status(200)
               .json(new apiResponse(200,order,"Order Created Sucessfully.."));
 });
@@ -47,7 +55,7 @@ const createOrder = asyncHandler(async(req,res)=>{
 const getOrders = asyncHandler(async(req,res)=>{
 
     const orders = await Order.find({ user: req.user._id })
-    .populate("products.product", "name")
+    .populate("products.product", "name finalPrice productImage")
     .sort({ createdAt: -1 });
 
     return res.status(200)
@@ -73,6 +81,12 @@ const cancelOrder = asyncHandler(async(req,res)=>{
 
     order.status = "Cancelled";
     await order.save();
+
+    for (let item of order.products) {
+        await Product.findByIdAndUpdate(item.product, {
+            $inc: { stock: item.quantity }
+        });
+    }
 
     return res.status(200)
               .json(new apiResponse(200 , order , "Order Cancel Sucessfully.."))
