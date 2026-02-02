@@ -93,14 +93,14 @@ const deleteProduct = asyncHandler(async(req,res)=>{
     const { id } = req.params;
 
     const existedProduct = await Product.findById(id);
-    console.log("Right Now The Product Is Existed",existedProduct);
+    //console.log("Right Now The Product Is Existed",existedProduct);
 
     if(!existedProduct){
         throw new apiError(400,"The Product Is Not Found..");
     }
     
     const deletedProduct = await Product.findByIdAndDelete({_id: id,userId: req.user._id,});
-    console.log("Now Product Is Deleted",deletedProduct);
+    //console.log("Now Product Is Deleted",deletedProduct);
     
     return res.status(200)
               .json(new apiResponse(200,deletedProduct,"Product Deleted Sucessfully.."))
@@ -116,7 +116,7 @@ const fetchAllExistedProducts = asyncHandler(async(req,res)=>{
     const query = categoryId ? { category: categoryId } : {};
 
     const totalProducts = await Product.countDocuments(query)
-    console.log("Total Products in Category :-", totalProducts);
+    //console.log("Total Products in Category :-", totalProducts);
 
     const products = await Product.find(query).populate({
             path: "userId",
@@ -124,7 +124,7 @@ const fetchAllExistedProducts = asyncHandler(async(req,res)=>{
             .skip(skip)
             .limit(limit);
 
-    console.log("All Products :- ",products);
+    //console.log("All Products :- ",products);
     
    return res.status(200)
    .json(new apiResponse(200, {
@@ -146,14 +146,14 @@ const getSingleProduct = asyncHandler(async(req,res)=>{
     const { id } = req.params;
 
     const existedProduct = await Product.findById(id);
-    console.log("Product Is Existed",existedProduct);
+    //console.log("Product Is Existed",existedProduct);
 
     if(!existedProduct){
         throw new apiError(401,"Product Is Not Existed That You Find..");
     }   
 
    const product =  await Product.findById(id);
-    console.log("Product Fetch Sucessfully..",product);
+    //console.log("Product Fetch Sucessfully..",product);
 
     return res.status(200)
               .json(new apiResponse(200,product,"Product Fetch Sucessfully.."))
@@ -205,7 +205,7 @@ const createCatrgory = asyncHandler(async(req,res)=>{
         priority: parseInt(priority),
 
     });
-    console.log("Created Category Is :-",category);
+    //console.log("Created Category Is :-",category);
     
     return res.status(201)
               .json(new apiResponse(201,category,"Category Created Sucessfully.."))
@@ -255,7 +255,7 @@ const getCategory = asyncHandler(async (req, res) => {
     .limit(limit)
     .lean();
 
-  console.log("Categories Are :- ", categories);
+  //console.log("Categories Are :- ", categories);
 
   return res.status(200).json(
     new apiResponse(
@@ -288,7 +288,7 @@ const deleteCategory = asyncHandler(async(req,res)=>{
         }
 
     const deleteCategory = await Category.findByIdAndDelete(id);
-    console.log("Deleted Category Is :-",deleteCategory);
+    //console.log("Deleted Category Is :-",deleteCategory);
     
     return res.status(201)
               .json(new apiResponse(201,deleteCategory,"Category Deleted Sucessfully"));

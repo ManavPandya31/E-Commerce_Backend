@@ -150,52 +150,56 @@ const displayAllCartItems = asyncHandler(async(req,res)=>{
 });
 
 const searchBar = asyncHandler(async (req, res) => {
+  
   const { q } = req.query;
 
   if (!q || q.trim() === "") {
-    return res.status(200).json(new apiResponse(200, { categories: [], products: [] }, "Empty query"));
+    return res.status(200).json(
+      new apiResponse(200, { categories: [], products: [] }, "Empty query")
+    );
   }
 
-  const rawText = q.trim();
-  const keywords = rawText.split(/\s+/).filter(Boolean);
+  const searchText = q.trim();
 
   const categories = await Category.find({
-    $and: keywords.map(word => ({
-      name: { $regex: word, $options: "i" }
-    }))
-  }).limit(4);
+    name: { $regex: searchText, $options: "i" }
+  });
 
-  const products = await Product.find({
-    $and: keywords.map(word => ({
+  let products = [];
+
+  if (categories.length > 0) {
+    const categoryIds = categories.map(cat => cat._id);
+
+    products = await Product.find({
+      category: { $in: categoryIds }
+    })
+      .populate("category", "name")
+      .select("name productImage price category");
+  } else {
+    products = await Product.find({
       $or: [
-        { name: { $regex: word, $options: "i" } },
-        { description: { $regex: word, $options: "i" } }
+        { name: { $regex: searchText, $options: "i" } },
+        { description: { $regex: searchText, $options: "i" } }
       ]
-    }))
-  })
-  .select("name productImage price category")
-  .populate("category", "name")
-  .limit(10);
+    })
+      .populate("category", "name")
+      .select("name productImage price category");
+  }
 
-  const suggestions = {
-    
-    categories: categories.map(cat => ({
-      _id: cat._id,
-      name: cat.name,
-      type: "category"
-    })),
-
-    products: products.map(prod => ({
-      _id: prod._id,
-      name: prod.name,
-      categoryName: prod.category?.name,
-      image: prod.productImage,
-      type: "product"
-    }))
-  };
-
-  return res.status(200)
-            .json(new apiResponse(200, suggestions, "Search suggestions fetched"));
+  return res.status(200).json(
+    new apiResponse(200, {
+      categories: categories.map(cat => ({
+        _id: cat._id,
+        name: cat.name
+      })),
+      products: products.map(prod => ({
+        _id: prod._id,
+        name: prod.name,
+        categoryName: prod.category?.name,
+        image: prod.productImage
+      }))
+    }, "Search results")
+  );
 });
 
 export { addToCart , updateCart , deleteFromCart , displayAllCartItems , searchBar};
