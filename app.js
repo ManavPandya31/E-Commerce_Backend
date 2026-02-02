@@ -17,9 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth",userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart",cartRoutes);
-
 app.use("/api/search",searchRoutes);
-
 app.use("/api/orders",orderRoutes);
 
 export default app;
