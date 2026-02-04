@@ -42,7 +42,7 @@ const orderSchema = new Schema({
         },
 
         addressType : {
-             type: String, enum: ["HOME", "WORK"], default: "HOME" 
+             type: String, enum: ["HOME", "WORK" , "UNIVERSITY"], default: "HOME" 
         },
   },
 

@@ -4,42 +4,57 @@ import { apiError } from "../Utils/apiError.js";
 import { Order } from "../models/order.model.js";
 import { User } from "../models/user.model.js";
 import { Product } from "../models/product.model.js";
+import { Coupon } from "../models/coupon.model.js";
 
-const createOrder = asyncHandler(async(req,res)=>{
+const createOrder = asyncHandler(async (req, res) => {
 
-    const { products , addressId } = req.body;
+    const { products, addressId, coupon, discountAmount, totalAmount: frontendTotalAmount } = req.body;
 
-    if(!products || products.length === 0){
-        throw new apiError(400,"Add Product For Order..!");
+    if (!products || products.length === 0) {
+        throw new apiError(400, "Add Product For Order..!");
     }
 
     const user = await User.findById(req.user._id);
     const address = user.addresses.id(addressId);
 
-    if(!address){
-        throw new apiError(400,"Address Is Not Found..!");
+    if (!address) {
+        throw new apiError(400, "Address Is Not Found..!");
     }
 
     address.addressType = address.addressType?.toUpperCase();
 
-    let totalAmount = 0;
+    let originalTotal = 0;
+    const productPriceMap = {};
 
     for (let item of products) {
         const product = await Product.findById(item.product);
-        if (!product) throw new apiError(404, `Product with id ${item.product} not found.`);
-        if (product.stock < item.quantity) throw new apiError(400, `Not enough stock for product ${product.name}.`);
-        totalAmount += product.finalPrice * item.quantity;
+        if (!product) {
+            throw new apiError(404, `Product with id ${item.product} not found.`);
+        }
+        if (product.stock < item.quantity) {
+            throw new apiError(400, `Not enough stock for product ${product.name}.`);
+        }
+        productPriceMap[item.product.toString()] = product.finalPrice;
+        originalTotal += product.finalPrice * item.quantity;
     }
 
-     const order = await Order.create({
+    let discountRatio = 1;
+
+    if (frontendTotalAmount !== undefined && frontendTotalAmount !== null && originalTotal > 0) {
+        discountRatio = frontendTotalAmount / originalTotal;
+    }
+
+    const order = await Order.create({
         user: req.user._id,
         products: products.map(p => ({
             product: p.product,
             quantity: p.quantity,
-            price: p.price
+            price: Math.round(productPriceMap[p.product.toString()] * discountRatio)
         })),
         address: address,
-        totalAmount,
+        coupon: coupon || null,
+        discountAmount: discountAmount || 0,
+        totalAmount: frontendTotalAmount ?? originalTotal
     });
 
     for (let item of products) {
@@ -48,8 +63,9 @@ const createOrder = asyncHandler(async(req,res)=>{
         });
     }
 
-    return res.status(200)
-              .json(new apiResponse(200,order,"Order Created Sucessfully.."));
+    return res
+        .status(200)
+        .json(new apiResponse(200, order, "Order Created Sucessfully.."));
 });
 
 const getOrders = asyncHandler(async(req,res)=>{
@@ -129,4 +145,215 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
         new apiResponse(200, order, "Order status updated successfully"));
 });
 
-export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , updateOrderStatus}
+const generateCouponCode = (length = 10) => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
+    for (let i = 0; i < length; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+};
+
+const createCoupon = asyncHandler(async(req,res)=>{
+
+    if (req.user.role !== "provider" && req.user.role !== "admin") {
+        throw new apiError(403, "Only admin or provider can create coupon");
+    }
+
+    const providerId = req.user._id;
+
+     const { discountType , discountValue , minOrderValue , expiryDate , maxUsage , applyOn , applicableProducts} = req.body;
+
+     if(!discountType || !discountValue || !expiryDate){
+        throw new apiError(401,"Fill Required Details..");        
+     }
+
+    let code;
+    let isCodeExists = true;
+
+     while (isCodeExists) {
+        code = generateCouponCode();
+        isCodeExists = await Coupon.findOne({ code });
+    }
+
+    // const existingCoupon  = await Coupon.findOne({ code: code });
+
+    //  if(existingCoupon){
+    //     throw new apiError(401,"Coupon Is Already Exists..");        
+    //  }
+
+    if (applyOn === "SELECTED" && (!applicableProducts || applicableProducts.length === 0)) {
+    throw new apiError(400, "Please select products for this coupon");
+    }
+
+     const coupon = await Coupon.create({
+        code: code,
+        provider: providerId,
+        discountType,
+        discountValue,
+        minOrderValue,
+        expiryDate,
+        maxUsage,
+        applyOn,
+        applicableProducts: applyOn === "SELECTED" ? applicableProducts : []
+    });
+
+    return res.status(200)
+              .json(new apiResponse(200,coupon,"Coupon Is Created Sucessfully.."))
+});
+
+const applyCoupon = asyncHandler(async(req,res)=>{
+
+    const { code, products } = req.body;
+
+    if(!code || !products || products.length === 0){
+        throw new apiError(401,"Coupon Code And Products Are Required!");        
+    }
+
+     const coupon = await Coupon.findOne({
+        code: code,
+        isActive: true
+    });
+
+    if(!coupon){
+        throw new apiError(404,"Invalid Coupon Code!");
+    }
+
+    if (coupon.expiryDate < new Date()) {
+        throw new apiError(401, "Coupon Is Expired..");
+    }
+
+    if (coupon.usedCount >= coupon.maxUsage) {
+        throw new apiError(401, "Coupon Usage Limit Reached..");
+    }
+
+    // let providerTotal = 0;
+
+    if (!coupon.provider) {
+        throw new apiError(500, "Coupon provider not found");
+    }
+
+    const providerId = coupon.provider.toString();
+
+    let eligibleTotal = 0;
+
+    for (let item of products) {
+        const product = await Product.findById(item.product);
+
+    if (!product) continue;
+
+    if (product.userId.toString() !== providerId) continue;
+    
+    if (
+        coupon.applyOn === "SELECTED" &&
+        !coupon.applicableProducts
+            .map(id => id.toString())
+            .includes(product._id.toString())
+        ) {
+            continue;
+    }
+
+    eligibleTotal += product.finalPrice * item.quantity;
+    }
+
+    if (eligibleTotal === 0) {
+        throw new apiError(401, "Coupon not applicable to selected products");
+    }
+
+    if (eligibleTotal < coupon.minOrderValue) {
+        throw new apiError(401,`Minimum order value should be ${coupon.minOrderValue}`
+        );
+    }
+
+    let discountAmount = 0;
+
+    if (coupon.discountType === "Percentage") {
+        discountAmount = (eligibleTotal * coupon.discountValue) / 100;
+    } else {
+        discountAmount = coupon.discountValue;
+    }
+
+    if (discountAmount > eligibleTotal) {
+        discountAmount = eligibleTotal;
+    }
+
+    const payableAmount = eligibleTotal - discountAmount;
+
+    // coupon.usedCount += 1;
+    // await coupon.save();
+
+    return res.status(200)
+              .json(new apiResponse(200,{couponCode: coupon.code,eligibleTotal,discountAmount,payableAmount,},"Coupon Applied Sucessfully"))
+});
+
+const viewCoupon = asyncHandler(async(req,res)=>{
+
+    let coupons;
+
+    if (req.user.role === "admin") {
+        coupons = await Coupon.find()
+            .populate("provider", "fullName email") 
+            .sort({ createdAt: -1 });
+    } 
+    else if (req.user.role === "provider") {
+        coupons = await Coupon.find({ provider: req.user._id })
+            .sort({ createdAt: -1 });
+    } 
+    else {
+        throw new apiError(403, "Only admin or provider can view coupons");
+    }
+
+    return res.status(200)
+              .json(new apiResponse(200,coupons,"Coupons Fetched Sucessfullly..."))
+
+});
+
+const editCoupon = asyncHandler(async(req,res)=>{
+
+    if (req.user.role !== "provider") {
+        throw new apiError(403, "Only provider can edit coupon");
+    }
+
+    const { id } = req.params;
+    const updates = req.body;
+
+    const coupon = await Coupon.findOne({ _id: id, provider: req.user._id });
+
+    if (!coupon) {
+        throw new apiError(404, "Coupon not found or you are not authorized");
+    }
+
+    const allowedFields = ["code", "discountType", "discountValue", "minOrderValue", "expiryDate", "maxUsage", "isActive" , "applyOn","applicableProducts"];
+    allowedFields.forEach(field => {
+        if (updates[field] !== undefined) {
+            coupon[field] = updates[field];
+        }
+    });
+
+    await coupon.save();
+
+    return res.status(200)
+              .json(new apiResponse(200,coupon,"Coupon Updated Sucessfully.."))
+});
+
+const deleteCoupon = asyncHandler(async (req, res) => {
+
+    if (req.user.role !== "provider") {
+        throw new apiError(401, "Only provider can delete coupon");
+    }
+
+    const { id } = req.params;
+
+    const coupon = await Coupon.findOne({ _id: id, provider: req.user._id });
+
+    if (!coupon) {
+        throw new apiError(404, "Coupon not found or you are not authorized");
+    }
+
+    await Coupon.findByIdAndDelete(id);
+
+    return res.status(200)
+              .json(new apiResponse(200, coupon, "Coupon deleted successfully"));
+});
+
+export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon}
