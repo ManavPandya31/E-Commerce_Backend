@@ -28,7 +28,7 @@ const couponSchema = new Schema({
     },
 
     minOrderValue : {
-        type : String,
+        type : Number,
         default : 0,
     },
 
@@ -39,6 +39,7 @@ const couponSchema = new Schema({
 
     maxUsage : {
         type : Number,
+        required : true,
         default : 1,
     },
 
@@ -51,6 +52,20 @@ const couponSchema = new Schema({
         type : Boolean,
         default : true,
     },
+
+    applyOn: {
+        type: String,
+        enum: ["ALL", "SELECTED"],
+        default: "All",
+    },
+
+    applicableProducts: [
+     {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+        }
+],
+
 },{timestamps : true});
 
 export const Coupon = mongoose.model("Coupon",couponSchema)
