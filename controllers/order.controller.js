@@ -5,6 +5,7 @@ import { Order } from "../models/order.model.js";
 import { User } from "../models/user.model.js";
 import { Product } from "../models/product.model.js";
 import { Coupon } from "../models/coupon.model.js";
+import { CouponUsage } from  "../models/couponUsage.model.js";
 
 const createOrder = asyncHandler(async (req, res) => {
 
@@ -27,6 +28,7 @@ const createOrder = asyncHandler(async (req, res) => {
     const productPriceMap = {};
 
     for (let item of products) {
+
         const product = await Product.findById(item.product);
         if (!product) {
             throw new apiError(404, `Product with id ${item.product} not found.`);
@@ -51,11 +53,14 @@ const createOrder = asyncHandler(async (req, res) => {
             quantity: p.quantity,
             price: Math.round(productPriceMap[p.product.toString()] * discountRatio)
         })),
+
         address: address,
         coupon: coupon || null,
         discountAmount: discountAmount || 0,
         totalAmount: frontendTotalAmount ?? originalTotal
     });
+
+        await order.save();
 
     for (let item of products) {
         await Product.findByIdAndUpdate(item.product, {
@@ -63,9 +68,25 @@ const createOrder = asyncHandler(async (req, res) => {
         });
     }
 
+    if (coupon) {
+        const usedCoupon = await Coupon.findOne({ code: coupon });
+        if (usedCoupon) {
+
+            usedCoupon.usedCount += 1;
+
+            await usedCoupon.save();
+
+            await CouponUsage.create({
+                coupon: usedCoupon._id,
+                user: req.user._id,
+                order: order._id,  
+            });
+        }
+    }
+
     return res
         .status(200)
-        .json(new apiResponse(200, order, "Order Created Sucessfully.."));
+        .json(new apiResponse(200, order, "Order Created Successfully.."));
 });
 
 const getOrders = asyncHandler(async(req,res)=>{
@@ -282,6 +303,12 @@ const applyCoupon = asyncHandler(async(req,res)=>{
     // coupon.usedCount += 1;
     // await coupon.save();
 
+    // const couponUsage =  await CouponUsage.create({
+    //     coupon: coupon._id,
+    //     user: req.user._id,
+    //     // order: orderId,  
+    // });
+    
     return res.status(200)
               .json(new apiResponse(200,{couponCode: coupon.code,eligibleTotal,discountAmount,payableAmount,},"Coupon Applied Sucessfully"))
 });
@@ -310,20 +337,27 @@ const viewCoupon = asyncHandler(async(req,res)=>{
 
 const editCoupon = asyncHandler(async(req,res)=>{
 
-    if (req.user.role !== "provider") {
-        throw new apiError(403, "Only provider can edit coupon");
+    if (req.user.role !== "provider" && req.user.role !== "admin") {
+        throw new apiError(403, "Only provider or admin can edit coupon");
     }
 
     const { id } = req.params;
     const updates = req.body;
 
-    const coupon = await Coupon.findOne({ _id: id, provider: req.user._id });
+    let coupon;
+
+    if (req.user.role === "admin") {
+        coupon = await Coupon.findById(id);
+    } else {
+        coupon = await Coupon.findOne({ _id: id, provider: req.user._id });
+    }
 
     if (!coupon) {
         throw new apiError(404, "Coupon not found or you are not authorized");
     }
 
     const allowedFields = ["code", "discountType", "discountValue", "minOrderValue", "expiryDate", "maxUsage", "isActive" , "applyOn","applicableProducts"];
+    
     allowedFields.forEach(field => {
         if (updates[field] !== undefined) {
             coupon[field] = updates[field];
@@ -333,18 +367,24 @@ const editCoupon = asyncHandler(async(req,res)=>{
     await coupon.save();
 
     return res.status(200)
-              .json(new apiResponse(200,coupon,"Coupon Updated Sucessfully.."))
+              .json(new apiResponse(200,coupon,"Coupon Updated Successfully.."))
 });
 
 const deleteCoupon = asyncHandler(async (req, res) => {
 
-    if (req.user.role !== "provider") {
-        throw new apiError(401, "Only provider can delete coupon");
+    if (req.user.role !== "provider" && req.user.role !== "admin") {
+        throw new apiError(403, "Only provider or admin can delete coupon");
     }
 
     const { id } = req.params;
 
-    const coupon = await Coupon.findOne({ _id: id, provider: req.user._id });
+    let coupon;
+
+    if (req.user.role === "admin") {
+        coupon = await Coupon.findById(id);
+    } else {
+        coupon = await Coupon.findOne({ _id: id, provider: req.user._id });
+    }
 
     if (!coupon) {
         throw new apiError(404, "Coupon not found or you are not authorized");
@@ -356,4 +396,23 @@ const deleteCoupon = asyncHandler(async (req, res) => {
               .json(new apiResponse(200, coupon, "Coupon deleted successfully"));
 });
 
-export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon}
+const verifyCoupon = asyncHandler(async(req,res)=>{
+
+    const { code } = req.body;
+
+    if(!code){
+        throw new apiError(401,"Coupon Code Is Required..");
+    }
+
+    const coupon = await Coupon.findOne({code});
+
+    if (!coupon) return res.status(404).json(new apiResponse(404, null, "Coupon not found"));
+    if (!coupon.isActive) return res.status(400).json(new apiResponse(400, null, "Coupon is inactive"));
+    if (coupon.expiryDate < new Date()) return res.status(400).json(new apiResponse(400, null, "Coupon has expired"));
+    if (coupon.usedCount >= coupon.maxUsage) return res.status(400).json(new apiResponse(400, null, "Coupon usage limit reached"));
+
+    return res.status(200)
+              .json(new apiResponse(200,coupon,"Coupon Is Valid.."))
+});
+
+export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon , verifyCoupon}
