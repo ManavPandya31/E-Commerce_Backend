@@ -4,10 +4,11 @@ import { apiResponse } from "../Utils/apiResponse.js";
 import { apiError } from "../Utils/apiError.js";
 import { uploadOnCloudinary } from "../Utils/cloudinary.js";
 import { Category } from "../models/category.model.js";
+import { Combo } from "../models/combo.model.js";
 
 const addProduct = asyncHandler(async(req,res)=>{
 
-        const {name , description , price , category , stock , discountType, discountValue} = req.body;
+        const {name , description , price , category , stock , discountType, discountValue,} = req.body;
 
         //console.log("Req Body :- ",req.body);
 
@@ -160,6 +161,27 @@ const getSingleProduct = asyncHandler(async(req,res)=>{
 
 });
 
+const getRelatedProducts = asyncHandler(async(req,res)=>{
+
+    const { id } = req.params;
+
+    const product = await Product.findById(id);
+
+    if(!product){
+        throw new apiError(404,"Product Is Not Found..");
+    }
+
+    const relatedProducts = await Product.find({
+         category: product.category,
+        _id: { $ne: product._id }, 
+    })
+    .select("name price finalPrice productImage stock")
+    .limit(6);
+
+    return res.status(200)
+              .json(new apiResponse(200,relatedProducts,"Related Products Fetch Seucssfully.."))
+});
+
 const myProducts = asyncHandler(async(req,res)=>{
 
     const userId = req.user._id;
@@ -294,6 +316,57 @@ const deleteCategory = asyncHandler(async(req,res)=>{
               .json(new apiResponse(201,deleteCategory,"Category Deleted Sucessfully"));
 });
 
+const createCombo = asyncHandler(async(req,res)=>{
+
+    if(req.user.role !== "provider"){
+        throw new apiError(401,"You Are Not Eligable To Create Combo..");
+    }
+
+    const { mainProduct, subProducts, comboPrice } = req.body;
+
+    if(!mainProduct || !subProducts || subProducts.length===0){
+        throw new apiError(404,"Some Fields Is Missing..");
+    }
+
+    if (!comboPrice || comboPrice <= 0) {
+        throw new apiError(400, "Invalid combo price");
+    }
+
+    if (subProducts.includes(mainProduct)) {
+         throw new apiError(400, "Main product cannot be sub product");
+    }
+
+    const products = await Product.find({
+         _id: { $in: [mainProduct, ...subProducts] },
+         userId: req.user._id
+    });
+
+    if (products.length !== subProducts.length + 1) {
+         throw new apiError(400, "Invalid products selected");
+    }
+
+    const originalPrice = products.reduce(
+        (sum, p) => sum + p.finalPrice,
+        0
+    );
+
+    if (comboPrice > originalPrice) {
+        throw new apiError(400, "The Original Price Is Lower Then This Price..");
+    }
+
+    const combo = await Combo.create({
+        providerId: req.user._id,
+        mainProduct,
+        subProducts,
+        comboPrice,
+        originalPrice
+    });
+
+    return res.status(200)
+              .json(new apiResponse(200,combo,"Combo Created Sucessfully.."))
+
+});
+
 export { addProduct , updateProduct , deleteProduct , fetchAllExistedProducts ,
 getSingleProduct , myProducts , createCatrgory , updateCategory , getCategory , 
-deleteCategory};
+deleteCategory , getRelatedProducts  , createCombo};

@@ -6,7 +6,7 @@ const cartItemSchma = new Schema({
         ref : "Product",
         required : true,
     },
-
+    
     quantity : {
         type : Number,
         default : 1,
