@@ -46,13 +46,17 @@ const productSchema = new Schema({
           value: {
              type: Number,
              default: 0,
+        },
     },
-},
 
     finalPrice: {
          type: Number,
-}
-    
+    },
+
+    isCombo: {
+        type: Boolean,
+        default: false,
+    },    
 },
     
     {timestamps:true}
