@@ -359,7 +359,8 @@ const createCombo = asyncHandler(async(req,res)=>{
         mainProduct,
         subProducts,
         comboPrice,
-        originalPrice
+        originalPrice,
+        isActive: true,
     });
 
     return res.status(200)
@@ -367,6 +368,166 @@ const createCombo = asyncHandler(async(req,res)=>{
 
 });
 
+// const getCombo = asyncHandler(async(req,res)=>{
+
+//     const combos = await Combo.find({isActive : true})  
+//         .populate({ path: "mainProduct", select: "name finalPrice productImage stock"})
+//         .populate({ path: "subProducts", select: "name finalPrice productImage stock"}).lean();
+
+//     //console.log("Combos found:", combos);
+
+//     if(!combos || combos.length === 0){
+//         throw new apiError(404,"No Combos Available..");
+//     }
+
+//     return res.status(200)
+//               .json(new apiResponse(200,combos,"Combos Are Fetch Sucessfully.."))
+// });
+
+const getComboProduct = asyncHandler(async(req,res)=>{
+
+    const { productId } = req.params;
+
+    if(!productId){
+        throw new apiError(404,"Missing Fields...");
+    }
+
+    const combo = await Combo.findOne( {mainProduct: productId , isActive: true })
+             .populate("mainProduct", "name finalPrice productImage")
+             .populate("subProducts", "name finalPrice productImage");
+
+    if(!combo){
+        throw new apiError(401,"No Combo Is Available For This Product..");
+    }
+
+    return res.status(200)  
+              .json(new apiResponse(200,combo,"Combo Is Fetch Sucess For This Product.."))
+});
+
+const getProvidersCombo = asyncHandler(async(req,res)=>{
+
+    if(req.user.role !== "provider"){
+        throw new apiError(401,"Only Product Provider Can View His Product Combs..");
+    }
+
+    const providerId = req.user._id;
+
+    const combos = await Combo.find({ providerId })
+        .populate({ path: "mainProduct" , select: "name finalPrice productImage stock" })
+        .populate({ path: "subProducts" , select: "name finalPrice productImage stock" }).lean();
+
+    if(!combos || combos.length === 0){
+        throw new apiError(404,"No Combos Found For This Provider...");
+    }
+
+    return res.status(200)
+              .json(new apiResponse(200,combos,"Combos Fetch Sucessfully.."))
+
+});
+
+const getAllCombos = asyncHandler(async(req,res)=>{
+
+    if(req.user.role !== "admin"){
+        throw new apiError(401,"Only Admin Can Do This...");
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalCombos = await Combo.countDocuments();
+
+    const combos = await Combo.find()
+        .populate({ path: "providerId" , select: "fullName email phoneNumber" })
+        .populate({ path: "mainProduct" , select: "name finalPrice productImage stock" })
+        .populate({ path: "subProducts" , select: "name finalPrice productImage stock" })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    if(!combos || combos.length === 0){
+        throw new apiError(404,"No Combos Found..");
+    }
+
+    return res.status(200)
+              .json(new apiResponse(200,{ combos , pageData : { currentPage : page , totalCombos , totalCombos : Math.ceil(totalCombos/limit)},},"All Combos Fetch Sucessfully.."))
+
+});
+
+const updateCombo = asyncHandler(async(req,res)=>{
+
+    if(req.user.role !== "provider"){
+        throw new apiError(401,"Only Provider Can Update Combos... ");
+    }
+
+    const { id } = req.params;
+    const { mainProduct, subProducts, comboPrice, isActive } = req.body;
+
+    const combo = await Combo.findOne({ _id: id, providerId: req.user._id });
+
+        if(!combo){
+            throw new apiError(404,"Combo Is Not Found..");
+        }
+
+         if (mainProduct) combo.mainProduct = mainProduct;
+         if (subProducts && subProducts.length > 0) combo.subProducts = subProducts;
+         if (typeof isActive === "boolean") combo.isActive = isActive;
+
+    if (combo.subProducts.includes(combo.mainProduct)) {
+        throw new apiError(400, "Main product cannot be sub product");
+    }
+
+    const products = await Product.find({
+        _id: { $in: [combo.mainProduct, ...combo.subProducts] },
+        userId: req.user._id,
+    });
+
+    if (products.length !== combo.subProducts.length + 1) {
+        throw new apiError(400, "Invalid products selected");
+    }
+
+    const originalPrice = products.reduce(
+        (sum, p) => sum + p.finalPrice,
+        0
+    );
+
+    if (comboPrice) {
+        if (comboPrice <= 0 || comboPrice > originalPrice) {
+            throw new apiError(400, "Invalid combo price");
+        }
+        combo.comboPrice = comboPrice;
+    }
+
+    combo.originalPrice = originalPrice;
+
+    await combo.save();
+
+    return res.status(200)
+              .json(new apiResponse(200,combo,"Combo Updated Sucessfully.."))
+
+});
+
+const deleteCombo = asyncHandler(async(req,res)=>{
+
+    if(req.user.role !== "provider"){
+        throw new apiError(401,"Only Provider Can Delete...");
+    }
+
+    const { id } = req.params;
+
+    const combo = await Combo.findOneAndDelete({ _id: id, providerId: req.user._id });
+
+    if(!combo){
+        throw new apiError(404,"Combo Not Found..");
+    }
+
+    return res.status(200)
+              .json(new apiResponse(200,combo,"Combo Deleted Sucessfully.."))
+
+});
+
 export { addProduct , updateProduct , deleteProduct , fetchAllExistedProducts ,
 getSingleProduct , myProducts , createCatrgory , updateCategory , getCategory , 
-deleteCategory , getRelatedProducts  , createCombo};
+deleteCategory , getRelatedProducts  , createCombo  , getComboProduct ,
+getProvidersCombo , getAllCombos , updateCombo , deleteCombo};

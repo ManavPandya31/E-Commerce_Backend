@@ -25,6 +25,17 @@ const orderSchema = new Schema({
                 type : Number,
                 required : true,
             },
+
+            comboId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Combo",
+                default: null
+            },
+
+            isCombo: {
+                type: Boolean,
+                default: false
+        }
         }
     ],
 

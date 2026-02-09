@@ -6,6 +6,7 @@ import { User } from "../models/user.model.js";
 import { Product } from "../models/product.model.js";
 import { Coupon } from "../models/coupon.model.js";
 import { CouponUsage } from  "../models/couponUsage.model.js";
+import { Combo } from "../models/combo.model.js";
 
 const createOrder = asyncHandler(async (req, res) => {
 
@@ -25,44 +26,77 @@ const createOrder = asyncHandler(async (req, res) => {
     address.addressType = address.addressType?.toUpperCase();
 
     let originalTotal = 0;
-    const productPriceMap = {};
+    const orderProducts = [];
 
     for (let item of products) {
 
-        const product = await Product.findById(item.product);
-        if (!product) {
-            throw new apiError(404, `Product with id ${item.product} not found.`);
+        if (item.comboId) {
+
+            const combo = await Combo.findById(item.comboId)
+                .populate("mainProduct")
+                .populate("subProducts");
+
+            if (!combo || !combo.isActive) {
+                throw new apiError(400, "Invalid combo");
+            }
+
+            const comboItems = [combo.mainProduct, ...combo.subProducts];
+            const comboOriginalPrice = comboItems.reduce((sum, p) => sum + p.finalPrice, 0);
+
+            for (let p of comboItems) {
+                if (p.stock < item.quantity) {
+                    throw new apiError(400, `Not enough stock for ${p.name}`);
+                }
+                const proportionalPrice = (p.finalPrice / comboOriginalPrice) * combo.comboPrice;
+                orderProducts.push({
+                    product: p._id,
+                    quantity: item.quantity,
+                    price: Math.round(proportionalPrice),
+                    comboId: combo._id,      
+                    isCombo: true 
+                });
+                originalTotal += proportionalPrice * item.quantity;
+            }
+
+        } else {
+
+            const product = await Product.findById(item.product);
+            if (!product) {
+                throw new apiError(404, `Product with id ${item.product} not found.`);
+            }
+            if (product.stock < item.quantity) {
+                throw new apiError(400, `Not enough stock for product ${product.name}.`);
+            }
+            orderProducts.push({
+                product: product._id,
+                quantity: item.quantity,
+                price: product.finalPrice
+            });
+            originalTotal += product.finalPrice * item.quantity;
         }
-        if (product.stock < item.quantity) {
-            throw new apiError(400, `Not enough stock for product ${product.name}.`);
-        }
-        productPriceMap[item.product.toString()] = product.finalPrice;
-        originalTotal += product.finalPrice * item.quantity;
     }
 
     let discountRatio = 1;
-
     if (frontendTotalAmount !== undefined && frontendTotalAmount !== null && originalTotal > 0) {
         discountRatio = frontendTotalAmount / originalTotal;
     }
 
     const order = await Order.create({
         user: req.user._id,
-        products: products.map(p => ({
+        products: orderProducts.map(p => ({
             product: p.product,
             quantity: p.quantity,
-            price: Math.round(productPriceMap[p.product.toString()] * discountRatio)
+            price: Math.round(p.price * discountRatio)
         })),
-
         address: address,
         coupon: coupon || null,
         discountAmount: discountAmount || 0,
         totalAmount: frontendTotalAmount ?? originalTotal
     });
 
-        await order.save();
+    await order.save();
 
-    for (let item of products) {
+    for (let item of orderProducts) {
         await Product.findByIdAndUpdate(item.product, {
             $inc: { stock: -item.quantity }
         });
@@ -71,22 +105,17 @@ const createOrder = asyncHandler(async (req, res) => {
     if (coupon) {
         const usedCoupon = await Coupon.findOne({ code: coupon });
         if (usedCoupon) {
-
             usedCoupon.usedCount += 1;
-
             await usedCoupon.save();
-
             await CouponUsage.create({
                 coupon: usedCoupon._id,
                 user: req.user._id,
-                order: order._id,  
+                order: order._id
             });
         }
     }
 
-    return res
-        .status(200)
-        .json(new apiResponse(200, order, "Order Created Successfully.."));
+    return res.status(200).json(new apiResponse(200, order, "Order Created Successfully.."));
 });
 
 const getOrders = asyncHandler(async(req,res)=>{

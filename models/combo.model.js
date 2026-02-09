@@ -29,7 +29,7 @@ const comboSchema = new Schema({
         type: Number 
     },
 
-    sActive: {
+    isActive: {
         type: Boolean,
         default: true
     },
