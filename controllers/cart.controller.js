@@ -149,6 +149,59 @@ const displayAllCartItems = asyncHandler(async(req,res)=>{
                   .json(new apiResponse(200 , cart , "All Cart Itrems.."));
 });
 
+// const searchBar = asyncHandler(async (req, res) => {
+  
+//   const { q } = req.query;
+
+//   if (!q || q.trim() === "") {
+//     return res.status(200).json(
+//       new apiResponse(200, { categories: [], products: [] }, "Empty query")
+//     );
+//   }
+
+//   const searchText = q.trim();
+
+//   const categories = await Category.find({
+//     name: { $regex: searchText, $options: "i" }
+//   });
+
+//   let products = [];
+
+//   if (categories.length > 0) {
+//     const categoryIds = categories.map(cat => cat._id);
+
+//     products = await Product.find({
+//       category: { $in: categoryIds }
+//     })
+//       .populate("category", "name")
+//       .select("name productImage price category");
+//   } else {
+//     products = await Product.find({
+//       $or: [
+//         { name: { $regex: searchText, $options: "i" } },
+//         { description: { $regex: searchText, $options: "i" } }
+//       ]
+//     })
+//       .populate("category", "name")
+//       .select("name productImage price category");
+//   }
+
+//   return res.status(200).json(
+//     new apiResponse(200, {
+//       categories: categories.map(cat => ({
+//         _id: cat._id,
+//         name: cat.name
+//       })),
+//       products: products.map(prod => ({
+//         _id: prod._id,
+//         name: prod.name,
+//         categoryName: prod.category?.name,
+//         image: prod.productImage
+//       }))
+//     }, "Search results")
+//   );
+// });
+
 const searchBar = asyncHandler(async (req, res) => {
   
   const { q } = req.query;
@@ -165,33 +218,21 @@ const searchBar = asyncHandler(async (req, res) => {
     name: { $regex: searchText, $options: "i" }
   });
 
-  let products = [];
+  const categoryIds = categories.map(cat => cat._id);
 
-  if (categories.length > 0) {
-    const categoryIds = categories.map(cat => cat._id);
-
-    products = await Product.find({
-      category: { $in: categoryIds }
-    })
-      .populate("category", "name")
-      .select("name productImage price category");
-  } else {
-    products = await Product.find({
-      $or: [
-        { name: { $regex: searchText, $options: "i" } },
-        { description: { $regex: searchText, $options: "i" } }
-      ]
-    })
-      .populate("category", "name")
-      .select("name productImage price category");
-  }
+  const products = await Product.find({
+    $or: [
+      { name: { $regex: searchText, $options: "i" } },
+      { description: { $regex: searchText, $options: "i" } },
+      { category: { $in: categoryIds } }  
+    ]
+  })
+    .populate("category", "name")
+    .select("name productImage price category");
 
   return res.status(200).json(
     new apiResponse(200, {
-      categories: categories.map(cat => ({
-        _id: cat._id,
-        name: cat.name
-      })),
+      categories: categories.map(cat => ({ _id: cat._id, name: cat.name })),
       products: products.map(prod => ({
         _id: prod._id,
         name: prod.name,

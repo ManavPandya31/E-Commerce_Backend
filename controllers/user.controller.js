@@ -2,6 +2,8 @@ import { asyncHandler } from "../Utils/asyncHandler.js";
 import { apiResponse } from "../Utils/apiResponse.js";
 import { apiError } from "../Utils/apiError.js";
 import { User } from "../models/user.model.js";
+import crypto from "crypto";
+import sendEmail from "../Utils/sendEmail.js"
 
     const options = {
                 httpOnly : true,
@@ -27,6 +29,95 @@ const accessAndRefreshTokens = async(userId)=>{
 
 };
 
+const verifyEmail = asyncHandler(async(req,res)=>{
+
+  const { token } = req.params;
+
+   const user = await User.findOne({
+    emailVerificationToken: token,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    throw new apiError(400, "Invalid or expired verification link");
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+
+  await user.save();
+
+  return res.status(200)
+            .json(new apiResponse(200,null,"Email Is Verified Sucessfully.."))
+});
+
+const forgotPassword = asyncHandler(async (req, res) => {
+
+    const { email } = req.body;
+
+    if (!email) {
+        throw new apiError(401, "Enter Email For Forgot Password..");
+    }
+
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+        throw new apiError(404, "User Not Found For Forgot Password..");
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    //console.log("OTP:", otp);
+
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+    user.resetPasswordOTP = hashedOTP;
+    user.resetPasswordOTPExpires = Date.now() + 10 * 60 * 1000; 
+
+    await user.save({ validateBeforeSave: false });
+
+    await sendEmail({
+        to: email,
+        subject: "Reset Your Password - OTP",
+        html: `
+          <h2>Password Reset OTP</h2>
+          <p>Your OTP to reset password is:</p>
+          <h3>${otp}</h3>
+          <p>This OTP expires in 10 minutes.</p>`,
+    });
+
+    return res.status(200)
+              .json(new apiResponse(200, null, "Password Reset OTP sent to email."));
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+
+    const { email, otp, password } = req.body;
+
+    if (!password || !otp || !email) {
+        throw new apiError(400, "Email, OTP, and password are required");
+    }
+
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+    const user = await User.findOne({
+        email,
+        resetPasswordOTP: hashedOTP,
+        resetPasswordOTPExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+        throw new apiError(400, "Invalid or expired OTP");
+    }
+
+    user.password = password;
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordOTPExpires = undefined;
+
+    await user.save();
+
+    return res.status(200).json(new apiResponse(200, null, "Password reset successfully"));
+});
+
 const userRegister = asyncHandler(async(req,res)=>{
   
     const { fullName , email , password , phoneNumber , gender } = req.body;
@@ -38,12 +129,14 @@ const userRegister = asyncHandler(async(req,res)=>{
         throw new apiError(400,"Fill All The Required Fields..");
     }
    //Find User In Database Id That Is Already Exists Or Not..
-   const userExisted =  await User.findOne({email});
+   const userExisted =  await User.findOne({ email });
    //console.log(userExisted);
 
     if(userExisted){
         throw new apiError(400,"User Is Already Existed..");
     }
+
+    const emailToken = crypto.randomBytes(32).toString("hex");
 
     const user = await User.create({
         fullName,
@@ -52,8 +145,25 @@ const userRegister = asyncHandler(async(req,res)=>{
         phoneNumber,
         gender,
         role,
+        emailVerificationToken: emailToken,
+        emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000,
     });
 
+    const verifyLink = `http://localhost:5173/verify-Email/${emailToken}`; 
+    console.log(verifyLink);
+
+    const emailResponse = await sendEmail({
+        to: email,
+        subject: "Verify Your Email",
+        html: `
+          <h2>Email Verification</h2>
+          <p>Click below to verify your email:</p>
+          <a href="${verifyLink}">Verify Email</a>
+          <p>This link expires in 24 hours.</p>`,
+      });
+
+    console.log("Email Response :-",emailResponse);
+      
     return res.status(200)
               .json(new apiResponse(200,user,"User Registered Sucessfully.."));
 });
@@ -74,6 +184,10 @@ const loginUser = asyncHandler(async(req,res)=>{
 
      if(!user){
         throw new apiError(400,"User Is Not Found..");
+     }
+
+     if (!user.isEmailVerified) {
+        throw new apiError(401, "Please Verify Your Email First..");
      }
 
  // When User Do The Login Then We Want To Do Compare The Password Then User Login Sucess..
@@ -201,4 +315,5 @@ const deleteAddress = asyncHandler(async (req, res) => {
     .json(new apiResponse(200, null, "Address Deleted Successfully"));
 });
 
-export { userRegister , loginUser , accessAndRefreshTokens , userDetails , addAddress , getAllAddress , updateAddress , deleteAddress};
+export { userRegister , verifyEmail , loginUser , accessAndRefreshTokens , userDetails ,
+addAddress , getAllAddress , updateAddress , deleteAddress , forgotPassword ,resetPassword};
