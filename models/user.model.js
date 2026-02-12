@@ -124,9 +124,9 @@ const userSchema = new Schema({
 );
 
 //Password Encryption..
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
     if (!this.isModified("password")) {
-       return ;
+       return;
     }
 
     this.password = await bcrypt.hash(this.password, 10);

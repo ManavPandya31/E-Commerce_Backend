@@ -52,41 +52,73 @@ const verifyEmail = asyncHandler(async(req,res)=>{
             .json(new apiResponse(200,null,"Email Is Verified Sucessfully.."))
 });
 
+const verifyOtp = asyncHandler(async(req,res)=>{
+
+  const { email , otp } = req.body;
+
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+    const user = await User.findOne({
+        email,
+        resetPasswordOTP: hashedOTP,
+        resetPasswordOTPExpires: { $gt: Date.now() },
+    });
+
+    if(!user){
+      throw new apiError(404,"Invaild OTP..");
+    }
+
+    return res.status(200)
+              .json(new apiResponse(200,null,"OTP Verified Sucessfully.."))
+});
+
 const forgotPassword = asyncHandler(async (req, res) => {
 
     const { email } = req.body;
 
     if (!email) {
-        throw new apiError(401, "Enter Email For Forgot Password..");
+        throw new apiError(400, "Email is required");
     }
 
     const user = await User.findOne({ email });
-    
+
     if (!user) {
-        throw new apiError(404, "User Not Found For Forgot Password..");
+        throw new apiError(404, "User not found");
+    }
+
+    if (
+        user.resetPasswordOTPExpires &&
+        user.resetPasswordOTPExpires > Date.now()
+    ) {
+        throw new apiError(429,"Please wait before requesting a new OTP");
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    //console.log("OTP:", otp);
 
-    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+    const hashedOTP = crypto
+        .createHash("sha256")
+        .update(otp)
+        .digest("hex");
+
     user.resetPasswordOTP = hashedOTP;
-    user.resetPasswordOTPExpires = Date.now() + 10 * 60 * 1000; 
+    user.resetPasswordOTPExpires = Date.now() + 30 * 1000;
 
     await user.save({ validateBeforeSave: false });
 
     await sendEmail({
         to: email,
-        subject: "Reset Your Password - OTP",
+        subject: "Reset Password OTP",
         html: `
           <h2>Password Reset OTP</h2>
-          <p>Your OTP to reset password is:</p>
+          <p>Your OTP is:</p>
           <h3>${otp}</h3>
-          <p>This OTP expires in 10 minutes.</p>`,
+          <p>This OTP expires in 30 seconds.</p>
+        `,
     });
 
-    return res.status(200)
-              .json(new apiResponse(200, null, "Password Reset OTP sent to email."));
+    return res.status(200).json(
+        new apiResponse(200, null, "OTP sent successfully")
+    );
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
@@ -316,4 +348,5 @@ const deleteAddress = asyncHandler(async (req, res) => {
 });
 
 export { userRegister , verifyEmail , loginUser , accessAndRefreshTokens , userDetails ,
-addAddress , getAllAddress , updateAddress , deleteAddress , forgotPassword ,resetPassword};
+addAddress , getAllAddress , updateAddress , deleteAddress , forgotPassword ,resetPassword,
+verifyOtp};

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { userRegister ,loginUser , userDetails , addAddress , updateAddress ,
-getAllAddress , deleteAddress , verifyEmail , forgotPassword , resetPassword} from "../controllers/user.controller.js";
+getAllAddress , deleteAddress , verifyEmail , forgotPassword , resetPassword , verifyOtp} from "../controllers/user.controller.js";
 import { verifyJwtToken } from "../middlewares/auth.middleware.js";
 
 const router = Router();
@@ -16,5 +16,6 @@ router.route("/deleteAddress/:addressId").delete(verifyJwtToken,deleteAddress);
 router.route("/verifyEmail/:token").get(verifyEmail);
 router.route("/forgotPassword").post(forgotPassword);
 router.route("/resetPassword").post(resetPassword);
+router.route("/verifyOTP").post(verifyOtp);
 
 export default router;
