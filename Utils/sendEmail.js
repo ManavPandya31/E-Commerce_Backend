@@ -13,7 +13,7 @@ const sendEmail = async ({ to, subject, html }) => {
     });
 
      await transporter.verify();
-    console.log("SMTP Ready");
+    //console.log("SMTP Ready");
 
     await transporter.sendMail({
       from: `"My App" <${process.env.EMAIL_USER}>`,
