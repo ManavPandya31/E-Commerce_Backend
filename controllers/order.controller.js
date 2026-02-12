@@ -264,6 +264,7 @@ const applyCoupon = asyncHandler(async(req,res)=>{
         code: code,
         isActive: true
     });
+    console.log("Coupon Code :-",coupon.code);
 
     if(!coupon){
         throw new apiError(404,"Invalid Coupon Code!");
@@ -305,6 +306,7 @@ const applyCoupon = asyncHandler(async(req,res)=>{
 
     eligibleTotal += product.finalPrice * item.quantity;
     }
+    console.log("Eligible Total:", eligibleTotal);
 
     if (eligibleTotal === 0) {
         throw new apiError(401, "Coupon not applicable to selected products");
@@ -337,6 +339,8 @@ const applyCoupon = asyncHandler(async(req,res)=>{
     //     user: req.user._id,
     //     // order: orderId,  
     // });
+
+    console.log("Coupon Apply On:", coupon.applyOn, "Applicable Products:", coupon.applicableProducts);
     
     return res.status(200)
               .json(new apiResponse(200,{couponCode: coupon.code,eligibleTotal,discountAmount,payableAmount,},"Coupon Applied Sucessfully"))
@@ -362,7 +366,7 @@ const viewCoupon = asyncHandler(async(req,res)=>{
     return res.status(200)
               .json(new apiResponse(200,coupons,"Coupons Fetched Sucessfullly..."))
 
-});
+}); 
 
 const editCoupon = asyncHandler(async(req,res)=>{
 

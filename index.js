@@ -3,6 +3,7 @@
 import dotenv from "dotenv";
 
 dotenv.config({path : "./.env"});
+// console.log("ENV TEST:", process.env.BACKEND_URL);
 
 import app from "./app.js";
 import connectDB from "./DB/connectDB.js";

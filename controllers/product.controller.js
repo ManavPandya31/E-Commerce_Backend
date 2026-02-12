@@ -35,7 +35,7 @@ const addProduct = asyncHandler(async(req,res)=>{
 
     if (discountType && discountValue > 0) {
 
-        if (discountType === "Percetange") {
+        if (discountType === "Percentage") {
             finalPrice = price - (price * discountValue) / 100;
         }
 
@@ -67,26 +67,110 @@ const addProduct = asyncHandler(async(req,res)=>{
 
 });
 
-const updateProduct = asyncHandler(async(req,res)=>{
+// const updateProduct = asyncHandler(async(req,res)=>{
 
-    const {id} = req.params;
-    const updates = req.body; 
+//     const {id} = req.params;
+//     const updates = req.body; 
 
-    const product = await Product.findByIdAndUpdate(
-        { _id: id, userId: req.user._id }, 
-        updates,
-        {new : true},
-    );
+//     const product = await Product.findByIdAndUpdate(
+//         { _id: id, userId: req.user._id }, 
+//         updates,
+//         {new : true},
+//     );
 
-   // console.log("Updated Product :-",product);
+//    // console.log("Updated Product :-",product);
     
-    if(!product){
-        throw new apiError(401,"Product Is Not Found..");
+//     if(!product){
+//         throw new apiError(401,"Product Is Not Found..");
+//     }
+
+//     let finalPrice = product.price;
+
+//   if (discountType) {
+//     if (discountType === "Percentage") {
+//       finalPrice =
+//         product.price -
+//         (product.price * Number(discountValue || 0)) / 100;
+//     }
+
+//     if (discountType === "Flat") {
+//       finalPrice =
+//         product.price - Number(discountValue || 0);
+//     }
+
+//     if (finalPrice < 0) finalPrice = 0;
+
+//     product.discount = {
+//       type: discountType,
+//       value: Number(discountValue || 0),
+//     };
+//   } else {
+//     product.discount = {
+//       type: null,
+//       value: 0,
+//     };
+//   }
+
+//   product.finalPrice = finalPrice;
+
+//   await product.save();
+
+//     return res.status(200)
+//               .json(new apiResponse(200,product,"Product Updaed Sucesfully"))
+
+// });
+
+const updateProduct = asyncHandler(async (req, res) => {
+
+  const { id } = req.params;
+  const {name,description,price,category,stock,discountType,discountValue,} = req.body;
+
+  const product = await Product.findOne({ _id: id, userId: req.user._id });
+
+  if (!product) {
+    throw new apiError(404, "Product Not Found");
+  }
+
+  if (name) product.name = name.trim();
+  if (description) product.description = description.trim();
+  if (price) product.price = Number(price);
+  if (category) product.category = category;
+  if (stock) product.stock = stock;
+
+  let finalPrice = product.price;
+
+  if (discountType) {
+    if (discountType === "Percentage") {
+      finalPrice =
+        product.price -
+        (product.price * Number(discountValue || 0)) / 100;
     }
 
-    return res.status(200)
-              .json(new apiResponse(200,product,"Product Updaed Sucesfully"))
+    if (discountType === "Flat") {
+      finalPrice =
+        product.price - Number(discountValue || 0);
+    }
 
+    if (finalPrice < 0) finalPrice = 0;
+
+    product.discount = {
+      type: discountType,
+      value: Number(discountValue || 0),
+    };
+  } else {
+    product.discount = {
+      type: null,
+      value: 0,
+    };
+  }
+
+  product.finalPrice = finalPrice;
+
+  await product.save();
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, product, "Product Updated Successfully"));
 });
 
 const deleteProduct = asyncHandler(async(req,res)=>{
@@ -396,9 +480,10 @@ const getComboProduct = asyncHandler(async(req,res)=>{
              .populate("mainProduct", "name finalPrice productImage")
              .populate("subProducts", "name finalPrice productImage");
 
-    if(!combo){
-        throw new apiError(401,"No Combo Is Available For This Product..");
-    }
+     if (!combo) {
+        return res.status(200).json(
+            new apiResponse(200, null, "No combo available for this product"));
+        }
 
     return res.status(200)  
               .json(new apiResponse(200,combo,"Combo Is Fetch Sucess For This Product.."))

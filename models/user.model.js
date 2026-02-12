@@ -46,8 +46,8 @@ const addressSchema = new Schema(
 
     addressType: {
       type: String,
-      enum: ["Home", "Work"],
-      default: "Home"
+      enum: ["HOME", "WORK"],
+      default: "HOME"
     },
 
     isDefault: {
@@ -59,6 +59,7 @@ const addressSchema = new Schema(
 );
 
 const userSchema = new Schema({
+
     fullName : {
         type : String,
         required : true,
@@ -93,6 +94,27 @@ const userSchema = new Schema({
 
     refreshToken : {
         type : String,
+    },
+
+    isEmailVerified: {
+        type: Boolean,
+        default: false,
+    },
+
+    emailVerificationToken: {
+        type: String,
+    },
+
+    emailVerificationExpires: {
+        type: Date,
+    },
+
+    resetPasswordOTP: {
+        type: String,
+    },
+
+    resetPasswordOTPExpires: {
+        type: Date,
     },
 
      addresses: [addressSchema] 

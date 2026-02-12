@@ -39,7 +39,7 @@ const productSchema = new Schema({
    discount : {
          type: {
             type: String,   
-            enum: ["Percetange", "Flat"],
+             enum: ["Percentage", "Flat"],
             default: null,
     },
   
