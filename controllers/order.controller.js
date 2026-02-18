@@ -158,19 +158,38 @@ const cancelOrder = asyncHandler(async(req,res)=>{
               .json(new apiResponse(200 , order , "Order Cancel Sucessfully.."))
 });
 
-const getAllOrdersAdminProvider = asyncHandler(async(req,res)=>{
+const getAllOrdersAdminProvider = asyncHandler(async (req, res) => {
 
     if (req.user.role !== "admin" && req.user.role !== "provider") {
         throw new apiError(403, "Only Admin Or Provider Can View This Details..");
     }
 
-    const orders = await Order.find()
+    let orders;
+
+    if (req.user.role === "admin") {
+
+        orders = await Order.find()
+            .populate("user", "fullName email phoneNumber")
+            .populate("products.product", "name finalPrice productImage")
+            .sort({ createdAt: -1 });
+
+    } 
+    else {
+        const providerProducts = await Product.find({ userId: req.user._id }).select("_id");
+
+        const productIds = providerProducts.map(p => p._id);
+
+        orders = await Order.find({
+            "products.product": { $in: productIds }
+        })
         .populate("user", "fullName email phoneNumber")
-        .populate("products.product", "name finalPrice")
+        .populate("products.product", "name finalPrice productImage")
         .sort({ createdAt: -1 });
 
+    }
+
     return res.status(200).json(
-        new apiResponse(200, orders, "All orders fetched successfully")
+        new apiResponse(200, orders, "Orders fetched successfully")
     );
 });
 
@@ -210,7 +229,7 @@ const createCoupon = asyncHandler(async(req,res)=>{
         throw new apiError(403, "Only admin or provider can create coupon");
     }
 
-    const providerId = req.user._id;
+     const providerId = req.user._id;
 
      const { discountType , discountValue , minOrderValue , expiryDate , maxUsage , applyOn , applicableProducts} = req.body;
 
@@ -225,12 +244,6 @@ const createCoupon = asyncHandler(async(req,res)=>{
         code = generateCouponCode();
         isCodeExists = await Coupon.findOne({ code });
     }
-
-    // const existingCoupon  = await Coupon.findOne({ code: code });
-
-    //  if(existingCoupon){
-    //     throw new apiError(401,"Coupon Is Already Exists..");        
-    //  }
 
     if (applyOn === "SELECTED" && (!applicableProducts || applicableProducts.length === 0)) {
     throw new apiError(400, "Please select products for this coupon");
@@ -448,4 +461,6 @@ const verifyCoupon = asyncHandler(async(req,res)=>{
               .json(new apiResponse(200,coupon,"Coupon Is Valid.."))
 });
 
-export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon , verifyCoupon}
+export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , 
+updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon,
+verifyCoupon}

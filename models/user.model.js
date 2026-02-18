@@ -81,11 +81,12 @@ const userSchema = new Schema({
         required : true,
     },
 
-    role: {
-        type : String,
-        enum : ["customer","provider","admin"],
-        //default : "customer",
-    },  
+   role: {
+  type: String,
+  enum: ["customer","provider","admin"],
+  default: "customer",
+},
+  
 
     password : {
         type : String,          
@@ -124,9 +125,9 @@ const userSchema = new Schema({
 );
 
 //Password Encryption..
-userSchema.pre("save", async function () {
+userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) {
-       return;
+       return ;
     }
 
     this.password = await bcrypt.hash(this.password, 10);
