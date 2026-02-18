@@ -212,7 +212,7 @@ const userRegister = asyncHandler(async(req,res)=>{
 
 const loginUser = asyncHandler(async(req,res)=>{
 
-    console.log("Req Body",req.body);
+    //console.log("Req Body",req.body);
     
     const { email , password } = req.body;
 
@@ -222,7 +222,7 @@ const loginUser = asyncHandler(async(req,res)=>{
 
      const user = await User.findOne({email});
         
-     console.log("User Is :-",user);
+     //console.log("User Is :-",user);
 
      if(!user){
         throw new apiError(400,"User Is Not Found..");

@@ -495,19 +495,34 @@ const getProvidersCombo = asyncHandler(async(req,res)=>{
         throw new apiError(401,"Only Product Provider Can View His Product Combs..");
     }
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     const providerId = req.user._id;
+    const totalCombos = await Combo.countDocuments({ providerId });
 
     const combos = await Combo.find({ providerId })
         .populate({ path: "mainProduct" , select: "name finalPrice productImage stock" })
-        .populate({ path: "subProducts" , select: "name finalPrice productImage stock" }).lean();
+        .populate({ path: "subProducts" , select: "name finalPrice productImage stock" })
+        .skip(skip)
+        .limit(limit)
+        .lean();
 
     if(!combos || combos.length === 0){
         throw new apiError(404,"No Combos Found For This Provider...");
     }
 
     return res.status(200)
-              .json(new apiResponse(200,combos,"Combos Fetch Sucessfully.."))
-
+        .json(new apiResponse(200, {
+            combos,
+            pagination: {
+                totalCombos,
+                totalPages: Math.ceil(totalCombos / limit),
+                currentPage: page,
+                limit
+            }
+        }, "Combos fetched successfully"));
 });
 
 const getAllCombos = asyncHandler(async(req,res)=>{

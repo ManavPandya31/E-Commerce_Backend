@@ -229,7 +229,7 @@ const createCoupon = asyncHandler(async(req,res)=>{
         throw new apiError(403, "Only admin or provider can create coupon");
     }
 
-    const providerId = req.user._id;
+     const providerId = req.user._id;
 
      const { discountType , discountValue , minOrderValue , expiryDate , maxUsage , applyOn , applicableProducts} = req.body;
 
@@ -244,12 +244,6 @@ const createCoupon = asyncHandler(async(req,res)=>{
         code = generateCouponCode();
         isCodeExists = await Coupon.findOne({ code });
     }
-
-    // const existingCoupon  = await Coupon.findOne({ code: code });
-
-    //  if(existingCoupon){
-    //     throw new apiError(401,"Coupon Is Already Exists..");        
-    //  }
 
     if (applyOn === "SELECTED" && (!applicableProducts || applicableProducts.length === 0)) {
     throw new apiError(400, "Please select products for this coupon");
@@ -467,4 +461,6 @@ const verifyCoupon = asyncHandler(async(req,res)=>{
               .json(new apiResponse(200,coupon,"Coupon Is Valid.."))
 });
 
-export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon , verifyCoupon}
+export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , 
+updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon,
+verifyCoupon}
