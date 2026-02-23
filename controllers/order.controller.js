@@ -461,6 +461,96 @@ const verifyCoupon = asyncHandler(async(req,res)=>{
               .json(new apiResponse(200,coupon,"Coupon Is Valid.."))
 });
 
+const getProviderOwnOrders = asyncHandler(async (req, res) => {
+
+    if (req.user.role !== "provider") {
+        throw new apiError(403, "Only provider can access this resource");
+    }
+
+    const providerProducts = await Product.find({ userId: req.user._id })
+        .select("_id");
+
+    const productIds = providerProducts.map(p => p._id);
+
+    if (productIds.length === 0) {
+        return res.status(200).json(
+            new apiResponse(200, [], "No orders found for this provider")
+        );
+    }
+
+    let orders = await Order.find({
+        "products.product": { $in: productIds }
+    })
+        .populate("user", "fullName email phoneNumber")
+        .populate("products.product", "name finalPrice productImage")
+        .sort({ createdAt: -1 });
+
+    orders = orders.map(order => {
+        const filteredProducts = order.products.filter(item =>
+            productIds.some(id => id.toString() === item.product._id.toString())
+        );
+
+        return {
+            ...order.toObject(),
+            products: filteredProducts
+        };
+    });
+
+    return res.status(200).json(
+        new apiResponse(200, orders, "Provider orders fetched successfully")
+    );
+});
+
+const getProviderDashboardStats = asyncHandler(async (req, res) => {
+
+    if (req.user.role !== "provider") {
+        throw new apiError(403, "Only provider can access dashboard stats");
+    }
+
+    const providerId = req.user._id;
+
+    const totalProducts = await Product.countDocuments({ userId: providerId });
+
+    const totalCombos = await Combo.countDocuments({ providerId: providerId });
+    // console.log("Total Combos :-",totalCombos);    
+
+    const providerProducts = await Product.find({ userId: providerId }).select("_id");
+
+    const productIds = providerProducts.map(p => p._id);
+
+    let totalOrders = 0;
+    let earnings = 0;
+
+    if (productIds.length > 0) {
+
+        const orders = await Order.find({
+            "products.product": { $in: productIds }
+        });
+
+        totalOrders = orders.length;
+
+        orders.forEach(order => {
+            order.products.forEach(item => {
+                if (productIds.some(id => id.toString() === item.product.toString())) {
+                    earnings += item.price * item.quantity;
+                }
+            });
+        });
+    }
+
+    return res.status(200).json(
+        new apiResponse(200,
+            {
+                totalProducts,
+                totalCombos,
+                totalOrders,
+                earnings
+            },
+            "Provider dashboard stats fetched successfully"
+        )
+    );
+});
+
 export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , 
 updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon,
-verifyCoupon}
+verifyCoupon , getProviderOwnOrders , getProviderDashboardStats}
