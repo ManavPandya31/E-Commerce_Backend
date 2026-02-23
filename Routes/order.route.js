@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , updateOrderStatus} from "../controllers/order.controller.js";
-import { createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon , verifyCoupon} from "../controllers/order.controller.js";
+import { createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon , 
+verifyCoupon , getProviderOwnOrders , getProviderDashboardStats} from "../controllers/order.controller.js";
 import { verifyJwtToken } from "../middlewares/auth.middleware.js";
 
 const orderrouter = Router();
@@ -10,6 +11,8 @@ orderrouter.route("/getOrder").get(verifyJwtToken, getOrders);
 orderrouter.route("/cancelOrder/:id").patch(verifyJwtToken, cancelOrder);
 orderrouter.route("/getAllOrdersAdminProvider").get(verifyJwtToken,getAllOrdersAdminProvider);
 orderrouter.route("/orderStatus/:id").put(verifyJwtToken,updateOrderStatus);
+orderrouter.route("/getProviderOwnOrders").get(verifyJwtToken,getProviderOwnOrders);
+orderrouter.route("/providerDashboard").get(verifyJwtToken,getProviderDashboardStats);
 
 orderrouter.route("/createCoupon").post(verifyJwtToken,createCoupon);
 orderrouter.route("/applyCoupon").post(verifyJwtToken,applyCoupon);

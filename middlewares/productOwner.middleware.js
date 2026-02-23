@@ -12,7 +12,7 @@ const verifyProductOwner = asyncHandler(async (req, res, next) => {
     const userRole = req.user.role;
 
     const product = await Product.findById(productId);
-    console.log("Product Is :-", product);
+    //console.log("Product Is :-", product);
 
     if (!product) {
       throw new apiError(404, "Product Not Found");

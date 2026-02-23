@@ -4,6 +4,7 @@ import { apiError } from "../Utils/apiError.js";
 import { User } from "../models/user.model.js";
 import { Product } from "../models/product.model.js";
 import { Order } from "../models/order.model.js";
+import { Contact } from "../models/contact.model.js";
 import crypto from "crypto";
 import sendEmail from "../Utils/sendEmail.js"
 
@@ -405,6 +406,44 @@ const deleteAddress = asyncHandler(async (req, res) => {
     .json(new apiResponse(200, null, "Address Deleted Successfully"));
 });
 
+const contact = asyncHandler(async (req, res) => {
+
+  const { name, email, message } = req.body;
+
+  if (!name || !email || !message) {
+    throw new apiError(400, "All fields are required");
+  }
+
+  const contact = await Contact.create({name,email,message,});
+
+  await sendEmail({
+    to: process.env.EMAIL_USER,
+    subject: "New Contact Message",
+    html: `
+      <h2>New Contact Message</h2>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Message:</strong></p>
+      <p>${message}</p>
+    `,
+  });
+
+  await sendEmail({
+    to: email,
+    subject: "We received your message",
+    html: `
+      <h3>Hello ${name},</h3>
+      <p>Thank you for contacting us.</p>
+      <p>We have received your message and will get back to you shortly.</p>
+      <br/>
+      <p>Best Regards,<br/>Support Team</p>
+    `,
+  });
+
+  return res.status(200)
+            .json(new apiResponse(200,contact,"Contact message sent successfully"));
+});
+
 export { userRegister , verifyEmail , loginUser , accessAndRefreshTokens , userDetails ,
 addAddress , getAllAddress , updateAddress , deleteAddress , forgotPassword ,resetPassword,
-verifyOtp , getAllUsers  , getUsersByRole , getAdminDashboardStats};
+verifyOtp , getAllUsers  , getUsersByRole , getAdminDashboardStats , contact};
