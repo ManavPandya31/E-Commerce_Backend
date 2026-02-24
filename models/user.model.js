@@ -81,12 +81,11 @@ const userSchema = new Schema({
         required : true,
     },
 
-   role: {
-  type: String,
-  enum: ["customer","provider","admin"],
-  default: "customer",
-},
-  
+    role: {
+        type: String,
+        enum: ["customer","provider","admin"],
+        default: "customer",
+    },
 
     password : {
         type : String,          
@@ -117,6 +116,11 @@ const userSchema = new Schema({
     resetPasswordOTPExpires: {
         type: Date,
     },
+
+    wishlist: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product"
+    }],
 
      addresses: [addressSchema] 
 },

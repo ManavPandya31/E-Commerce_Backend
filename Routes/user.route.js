@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { userRegister ,loginUser , userDetails , addAddress , updateAddress ,
 getAllAddress , deleteAddress , verifyEmail , forgotPassword , resetPassword , verifyOtp
-, getAllUsers , getUsersByRole , getAdminDashboardStats , contact} from "../controllers/user.controller.js";
+, getAllUsers , getUsersByRole , getAdminDashboardStats , contact , addWishlists} from "../controllers/user.controller.js";
 import { verifyJwtToken } from "../middlewares/auth.middleware.js";
 import { verifyAdmin } from "../middlewares/admin.middleware.js";
 
