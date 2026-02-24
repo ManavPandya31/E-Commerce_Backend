@@ -55,24 +55,29 @@ const orderSchema = new Schema({
         addressType : {
              type: String, enum: ["HOME", "WORK" , "UNIVERSITY"], default: "HOME" 
         },
-  },
+   },
 
     totalAmount : {
         type : Number,
         required : true,
     },
 
+    payment: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Payment",
+    },
+
+    paymentStatus: {
+        type: String,
+        enum: ["pending", "paid", "failed"],
+        default: "pending",
+    },
+
     status: {
         type: String,
         enum: ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"],
         default: "Pending"
-  },
-
-    // paymentMethod: {
-    //     type: String,
-    //     enum: ["COD", "Online"],
-    //     default: "COD"
-    // },
+}
 },
     
 {timestamps: true});

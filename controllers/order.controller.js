@@ -8,10 +8,12 @@ import { Coupon } from "../models/coupon.model.js";
 import { CouponUsage } from  "../models/couponUsage.model.js";
 import { Combo } from "../models/combo.model.js";
 import { Cart } from "../models/cart.model.js";
+import { razorpay } from "../utils/razorpay.js";
+import { Payment } from "../models/Payment.model.js";
 
 const createOrder = asyncHandler(async (req, res) => {
 
-    const { products, addressId, coupon, discountAmount, totalAmount: frontendTotalAmount } = req.body;
+    const { products, addressId, coupon, discountAmount, totalAmount: frontendTotalAmount} = req.body;
 
     if (!products || products.length === 0) {
         throw new apiError(400, "Add Product For Order..!");
@@ -95,54 +97,95 @@ const createOrder = asyncHandler(async (req, res) => {
         totalAmount: frontendTotalAmount ?? originalTotal
     });
 
+    const razorpayOrder = await razorpay.orders.create({
+        amount: order.totalAmount * 100,
+        currency: "INR",
+        receipt: `receipt_${order._id}`,
+    });
+
+    const firstProduct = await Product.findById(order.products[0].product);
+
+    const payment = await Payment.create({
+        order_id: razorpayOrder.id,
+        user_id: req.user._id,
+        provider_id: firstProduct.userId,
+        amount: order.totalAmount,
+        status: "processing"
+    });
+
+    order.payment = payment._id;
     await order.save();
 
-    for (let item of orderProducts) {
-        await Product.findByIdAndUpdate(item.product, {
-            $inc: { stock: -item.quantity }
-        });
-    }
-
-    if (coupon) {
-        const usedCoupon = await Coupon.findOne({ code: coupon });
-        if (usedCoupon) {
-            usedCoupon.usedCount += 1;
-            await usedCoupon.save();
-            await CouponUsage.create({
-                coupon: usedCoupon._id,
-                user: req.user._id,
-                order: order._id
-            });
-        }
-    }
-
-    const orderedProductIds = products
-        .filter(item => item.product)
-        .map(item => item.product);
-
-    await Cart.updateOne(
-        { user: req.user._id },
-        {
-            $pull: {
-                items: {
-                    product: { $in: orderedProductIds }
-                }
-            }
-        }
-    );
-
-    const updatedCart = await Cart.findOne({ user: req.user._id });
-
-    if (updatedCart) {
-        updatedCart.totalAmount = updatedCart.items.reduce(
-            (sum, item) => sum + item.finalPrice * item.quantity,
-            0
-        );
-        await updatedCart.save();
-    }
-
     return res.status(200)
-              .json(new apiResponse(200, order, "Order Created Successfully.."));
+              .json(new apiResponse(200, {
+                    orderId: order._id,
+                    razorpayOrderId: razorpayOrder.id,
+                    amount: razorpayOrder.amount,
+                    currency: razorpayOrder.currency,
+                    key: process.env.RAZORPAY_KEY_ID
+        },"Order Created. Proceed To Payment"));
+});
+
+const verifyPayment = asyncHandler(async (req, res) => {
+
+  const { razorpay_order_id, razorpay_payment_id } = req.body;
+
+  if (!razorpay_order_id || !razorpay_payment_id) {
+    throw new apiError(400, "Missing payment details");
+  }
+
+  const payment = await Payment.findOne({ order_id: razorpay_order_id });
+
+  if (!payment) {
+    throw new apiError(404, "Payment record not found");
+  }
+
+  if (payment.status === "success") {
+    return res.status(200).json(
+      new apiResponse(200, null, "Payment already verified")
+    );
+  }
+
+  payment.payment_id = razorpay_payment_id;
+  payment.status = "success";
+  await payment.save();
+
+  const order = await Order.findOne({ payment: payment._id });
+
+  if (!order) {
+    throw new apiError(404, "Order not found");
+  }
+
+  order.paymentStatus = "paid";
+  order.status = "Confirmed";
+  await order.save();
+
+  for (let item of order.products) {
+    await Product.findByIdAndUpdate(item.product, {
+      $inc: { stock: -item.quantity }
+    });
+  }
+
+  if (order.coupon) {
+    const usedCoupon = await Coupon.findOne({ code: order.coupon });
+    if (usedCoupon) {
+      usedCoupon.usedCount += 1;
+      await usedCoupon.save();
+      await CouponUsage.create({
+        coupon: usedCoupon._id,
+        user: order.user,
+        order: order._id
+      });
+    }
+  }
+
+  await Cart.updateOne(
+    { user: order.user },
+    { $set: { items: [], totalAmount: 0 } }
+  );
+
+  return res.status(200)
+            .json(new apiResponse(200, order, "Payment verified successfully"));
 });
 
 const getOrders = asyncHandler(async(req,res)=>{
@@ -580,4 +623,4 @@ const getProviderDashboardStats = asyncHandler(async (req, res) => {
 
 export { createOrder , getOrders , cancelOrder , getAllOrdersAdminProvider , 
 updateOrderStatus , createCoupon , applyCoupon , viewCoupon , editCoupon , deleteCoupon,
-verifyCoupon , getProviderOwnOrders , getProviderDashboardStats}
+verifyCoupon , getProviderOwnOrders , getProviderDashboardStats , verifyPayment}
