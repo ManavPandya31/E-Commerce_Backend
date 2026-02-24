@@ -5,6 +5,7 @@ import productRoutes from "./Routes/product.route.js";
 import cartRoutes from "./Routes/cart.route.js";
 import searchRoutes from "./Routes/search.route.js";
 import orderRoutes from "./Routes/order.route.js";
+import wishListsRoutes from "./Routes/wishlists.route.js";
 import compression from "compression";
 
 const app = express();
@@ -19,5 +20,6 @@ app.use("/api/products", productRoutes);
 app.use("/api/cart",cartRoutes);
 app.use("/api/search",searchRoutes);
 app.use("/api/orders",orderRoutes);
+app.use("/api/wishlists",wishListsRoutes);
 
 export default app;

@@ -627,7 +627,87 @@ const deleteCombo = asyncHandler(async(req,res)=>{
 
 });
 
+const addOrUpdateReview = asyncHandler(async (req, res) => {
+
+  const { id } = req.params;
+  const { rating, comment } = req.body;
+
+  if (!rating || rating < 1 || rating > 5) {
+    throw new apiError(400, "Rating must be between 1 and 5");
+  }
+
+  if (!comment) {
+    throw new apiError(400, "Comment is required");
+  }
+
+  const product = await Product.findById(id);
+
+  if (!product) {
+    throw new apiError(404, "Product not found");
+  }
+
+  const existingReview = product.reviews.find(
+    (r) => r.user.toString() === req.user._id.toString()
+  );
+
+  if (existingReview) {
+    existingReview.rating = rating;
+    existingReview.comment = comment;
+
+  } else {
+    product.reviews.push({
+      user: req.user._id,
+      name: req.user.fullName, 
+      rating,
+      comment,
+    });
+  }
+
+  product.totalReviews = product.reviews.length;
+
+  const total = product.reviews.reduce(
+    (acc, curr) => acc + curr.rating,
+    0
+  );
+
+  product.averageRating =
+    product.totalReviews === 0 ? 0 : total / product.totalReviews;
+
+  await product.save();
+
+  return res.status(200)
+            .json(new apiResponse(200,{averageRating: product.averageRating,totalReviews: product.totalReviews,reviews: product.reviews,},
+                "Review Submitted Successfully"));
+});
+
+const getProductReviews = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+      .populate("reviews.user", "name");
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      reviews: product.reviews,
+      averageRating: product.averageRating,
+      totalReviews: product.totalRatings,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export { addProduct , updateProduct , deleteProduct , fetchAllExistedProducts ,
 getSingleProduct , myProducts , createCatrgory , updateCategory , getCategory , 
 deleteCategory , getRelatedProducts  , createCombo  , getComboProduct ,
-getProvidersCombo , getAllCombos , updateCombo , deleteCombo};
+getProvidersCombo , getAllCombos , updateCombo , deleteCombo  , addOrUpdateReview , getProductReviews};

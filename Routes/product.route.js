@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { addProduct, deleteProduct, fetchAllExistedProducts, getSingleProduct, updateProduct 
 ,myProducts , createCatrgory, updateCategory, getCategory, deleteCategory , getRelatedProducts ,
- createCombo  , getComboProduct , getProvidersCombo , getAllCombos , updateCombo , deleteCombo} from "../controllers/product.controller.js";
+createCombo  , getComboProduct , getProvidersCombo , getAllCombos , updateCombo , deleteCombo,
+addOrUpdateReview , getProductReviews} from "../controllers/product.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJwtToken } from "../middlewares/auth.middleware.js";
 import { verifyProductOwner } from "../middlewares/productOwner.middleware.js";
@@ -29,5 +30,8 @@ productrouter.route("/createCategory").post(verifyJwtToken,verifyAdmin,createCat
 productrouter.route("/updateCategory/:id").put(verifyJwtToken,verifyAdmin,updateCategory);
 productrouter.route("/getCategory").get(getCategory);
 productrouter.route("/deleteCategory/:id").delete(verifyJwtToken,verifyAdmin,deleteCategory);
+
+productrouter.route("/reviewProduct/:id").post(verifyJwtToken,addOrUpdateReview);
+productrouter.route("/getReview/:id").get(getProductReviews);
 
 export default productrouter;   

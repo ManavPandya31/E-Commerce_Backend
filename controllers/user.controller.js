@@ -444,6 +444,78 @@ const contact = asyncHandler(async (req, res) => {
             .json(new apiResponse(200,contact,"Contact message sent successfully"));
 });
 
+const addWishlists = asyncHandler(async(req,res)=>{
+
+   const userId = req.user._id;
+   const { productId } = req.params;
+
+   const product = await Product.findById(productId);
+
+   if (!product) {
+     throw new apiError(404, "Product not found");
+   }
+
+   const user = await User.findById(userId);
+
+   if (user.wishlist.includes(productId)) {
+     throw new apiError(400, "Product already in wishlist");
+   }
+
+   await User.findByIdAndUpdate(
+     userId,
+     { $addToSet: { wishlist: productId } }, 
+     { new: true }
+   );
+
+   return res.status(200)
+             .json(new apiResponse(200,null,"Product Is Added In WishList."))
+});
+
+const removeFromWishLists = asyncHandler(async(req,res)=>{
+
+  const userId = req.user._id;
+  const { productId } = req.params;
+
+  await User.findByIdAndUpdate(
+    userId,
+    { $pull: { wishlist: productId } },
+    { new: true }
+  );
+
+  return res.status(200)
+            .json(new apiResponse(200,null,"Product Remove Sucessfully From Wishlists"))
+
+});
+
+const getUserWishlist = asyncHandler(async (req, res) => {
+
+  const userId = req.user._id;
+
+  const user = await User.findById(userId)
+    .populate("wishlist");
+
+  if (!user) {
+    throw new apiError(404, "User not found");
+  }
+
+  return res.status(200)
+            .json(new apiResponse(200, user.wishlist, "Wishlist fetched successfully"));
+});
+
+const isProductWishlisted = asyncHandler(async (req, res) => {
+
+  const userId = req.user._id;
+  const { productId } = req.params;
+
+  const user = await User.findById(userId);
+
+  const isWishlisted = user.wishlist.includes(productId);
+
+  return res.status(200)
+    .json(new apiResponse(200, { isWishlisted }, "Wishlist status fetched"));
+});
+
 export { userRegister , verifyEmail , loginUser , accessAndRefreshTokens , userDetails ,
 addAddress , getAllAddress , updateAddress , deleteAddress , forgotPassword ,resetPassword,
-verifyOtp , getAllUsers  , getUsersByRole , getAdminDashboardStats , contact};
+verifyOtp , getAllUsers  , getUsersByRole , getAdminDashboardStats , contact , addWishlists,
+removeFromWishLists , getUserWishlist , isProductWishlisted};
