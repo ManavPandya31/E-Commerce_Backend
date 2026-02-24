@@ -7,6 +7,7 @@ import { Product } from "../models/product.model.js";
 import { Coupon } from "../models/coupon.model.js";
 import { CouponUsage } from  "../models/couponUsage.model.js";
 import { Combo } from "../models/combo.model.js";
+import { Cart } from "../models/cart.model.js";
 
 const createOrder = asyncHandler(async (req, res) => {
 
@@ -52,8 +53,8 @@ const createOrder = asyncHandler(async (req, res) => {
                     product: p._id,
                     quantity: item.quantity,
                     price: Math.round(proportionalPrice),
-                    comboId: combo._id,      
-                    isCombo: true 
+                    comboId: combo._id,
+                    isCombo: true
                 });
                 originalTotal += proportionalPrice * item.quantity;
             }
@@ -115,7 +116,33 @@ const createOrder = asyncHandler(async (req, res) => {
         }
     }
 
-    return res.status(200).json(new apiResponse(200, order, "Order Created Successfully.."));
+    const orderedProductIds = products
+        .filter(item => item.product)
+        .map(item => item.product);
+
+    await Cart.updateOne(
+        { user: req.user._id },
+        {
+            $pull: {
+                items: {
+                    product: { $in: orderedProductIds }
+                }
+            }
+        }
+    );
+
+    const updatedCart = await Cart.findOne({ user: req.user._id });
+
+    if (updatedCart) {
+        updatedCart.totalAmount = updatedCart.items.reduce(
+            (sum, item) => sum + item.finalPrice * item.quantity,
+            0
+        );
+        await updatedCart.save();
+    }
+
+    return res.status(200)
+              .json(new apiResponse(200, order, "Order Created Successfully.."));
 });
 
 const getOrders = asyncHandler(async(req,res)=>{
