@@ -8,7 +8,7 @@ import { Coupon } from "../models/coupon.model.js";
 import { CouponUsage } from  "../models/couponUsage.model.js";
 import { Combo } from "../models/combo.model.js";
 import { Cart } from "../models/cart.model.js";
-import { razorpay } from "../utils/razorpay.js";
+import { razorpay } from "../Utils/razorpay.js";
 import { Payment } from "../models/Payment.model.js";
 
 const createOrder = asyncHandler(async (req, res) => {
