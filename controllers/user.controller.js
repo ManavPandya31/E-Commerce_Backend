@@ -187,7 +187,8 @@ const userRegister = asyncHandler(async(req,res)=>{
   
        //console.log("USER CREATED:", user);    
   
-      const verifyLink = `http://localhost:5173/verifyEmail/${emailToken}`; 
+      // const verifyLink = `http://localhost:5173/verifyEmail/${emailToken}`; 
+      const verifyLink = `${process.env.FRONTEND_URL}/verifyEmail/${emailToken}`;
       console.log(verifyLink);
   
       try {
@@ -203,7 +204,7 @@ const userRegister = asyncHandler(async(req,res)=>{
       } catch (err) {
         console.log("Email failed but user registered");
 }
-  
+    console.log("Register API Hit");
       //console.log("Email Response :-",emailResponse);
         
       return res.status(200)
