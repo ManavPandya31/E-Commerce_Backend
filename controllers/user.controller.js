@@ -157,8 +157,10 @@ const userRegister = asyncHandler(async(req,res)=>{
   try {
     
       const { fullName , email , password , phoneNumber , gender } = req.body;
+      console.log("BODY:", req.body);
       
       const role  = req.params.role || req.query.role;
+      console.log("ROLE:", role);
       //const role = req.query.role;
       if(!fullName || !email || !password || !gender || !phoneNumber){
   
