@@ -172,7 +172,7 @@ const userRegister = asyncHandler(async(req,res)=>{
           throw new apiError(400,"User Is Already Existed..");
       }
   
-      const emailToken = crypto.randomBytes(32).toString("hex");
+      //const emailToken = crypto.randomBytes(32).toString("hex");
   
       const user = await User.create({
           fullName,
@@ -181,30 +181,30 @@ const userRegister = asyncHandler(async(req,res)=>{
           phoneNumber,
           gender,
           role,
-          emailVerificationToken: emailToken,
-          emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000,
+          // emailVerificationToken: emailToken,
+          // emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000,
       });
   
        //console.log("USER CREATED:", user);    
   
       // const verifyLink = `http://localhost:5173/verifyEmail/${emailToken}`; 
-      const verifyLink = `${process.env.FRONTEND_URL}/verifyEmail/${emailToken}`;
-      console.log(verifyLink);
+      // const verifyLink = `${process.env.FRONTEND_URL}/verifyEmail/${emailToken}`;
+      // console.log(verifyLink);
   
-      try {
-        await sendEmail({
-          to: email,
-          subject: "Verify Your Email",
-          html: `
-            <h2>Email Verification</h2>
-            <p>Click below to verify your email:</p>
-            <a href="${verifyLink}">Verify Email</a>
-            <p>This link expires in 24 hours.</p>`,
-        });
-      } catch (err) {
-        console.log("Email failed but user registered");
-}
-    console.log("Register API Hit");
+//       try {
+//         await sendEmail({
+//           to: email,
+//           subject: "Verify Your Email",
+//           html: `
+//             <h2>Email Verification</h2>
+//             <p>Click below to verify your email:</p>
+//             <a href="${verifyLink}">Verify Email</a>
+//             <p>This link expires in 24 hours.</p>`,
+//         });
+//       } catch (err) {
+//         console.log("Email failed but user registered");
+// }
+//     console.log("Register API Hit");
       //console.log("Email Response :-",emailResponse);
         
       return res.status(200)
@@ -234,9 +234,9 @@ const loginUser = asyncHandler(async(req,res)=>{
         throw new apiError(400,"User Is Not Found..");
      }
 
-     if (!user.isEmailVerified) {
-        throw new apiError(401, "Please Verify Your Email First..");
-     }
+    //  if (!user.isEmailVerified) {
+    //     throw new apiError(401, "Please Verify Your Email First..");
+    //  }
 
  // When User Do The Login Then We Want To Do Compare The Password Then User Login Sucess..
     
