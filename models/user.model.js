@@ -98,7 +98,7 @@ const userSchema = new Schema({
 
     isEmailVerified: {
         type: Boolean,
-        default: false,
+        default: true,
     },
 
     emailVerificationToken: {
