@@ -17,7 +17,10 @@ app.use(compression());
 //   credentials: true
 // }));
 app.use(cors({
-  origin: "https://shoppzo.netlify.app",
+  origin: [
+    "https://shoppzo.netlify.app",
+    "http://localhost:5173"
+  ],
   credentials: true
 }));
 
