@@ -190,7 +190,8 @@ const userRegister = asyncHandler(async(req,res)=>{
       const verifyLink = `http://localhost:5173/verifyEmail/${emailToken}`; 
       console.log(verifyLink);
   
-      const emailResponse = await sendEmail({
+      try {
+        await sendEmail({
           to: email,
           subject: "Verify Your Email",
           html: `
@@ -199,6 +200,9 @@ const userRegister = asyncHandler(async(req,res)=>{
             <a href="${verifyLink}">Verify Email</a>
             <p>This link expires in 24 hours.</p>`,
         });
+      } catch (err) {
+        console.log("Email failed but user registered");
+}
   
       //console.log("Email Response :-",emailResponse);
         
