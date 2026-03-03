@@ -1,4 +1,4 @@
-console.log("sendEmail function started");
+//nsole.log("sendEmail function started");
 import nodeMailer from 'nodemailer';
 
 const sendEmail = async ({ to, subject, html }) => {
