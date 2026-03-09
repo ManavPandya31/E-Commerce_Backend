@@ -160,7 +160,7 @@ const userRegister = asyncHandler(async(req,res)=>{
       console.log("BODY:", req.body);
       
       const role  = req.params.role || req.query.role;
-      console.log("ROLE:", role);
+      //console.log("ROLE:", role);
       //const role = req.query.role;
       if(!fullName || !email || !password || !gender || !phoneNumber){
   
@@ -321,7 +321,7 @@ const getAdminDashboardStats = asyncHandler(async (req, res) => {
     Order.countDocuments()
   ]);
 
-  return res.status(200)
+  return res.status(200) 
             .json(new apiResponse(200,{
                             customers: customerCount,
                             providers: providerCount,
@@ -366,9 +366,8 @@ const updateAddress = asyncHandler(async (req, res) => {
   const { addressId } = req.params;
   const userId = req.user._id;
 
-  console.log("Address Id", addressId);
+  //console.log("Address Id", addressId);
   
-
   if (req.body.isDefault) {
     await User.updateOne(
       { _id: userId },
