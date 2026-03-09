@@ -15,8 +15,8 @@ const sendEmail = async ({ to, subject, html }) => {
       },
     });
     
-    console.log("EMAIL_USER:", process.env.EMAIL_USER);
-    console.log("EMAIL_PASS exists:", process.env.EMAIL_PASS ? true : false);
+    // console.log("EMAIL_USER:", process.env.EMAIL_USER);
+    // console.log("EMAIL_PASS exists:", process.env.EMAIL_PASS ? true : false);
 
      await transporter.verify();
     //console.log("SMTP Ready");
@@ -28,8 +28,7 @@ const sendEmail = async ({ to, subject, html }) => {
       html,
     });
 
-    console.log("Email Sent Successfully");
-
+    // console.log("Email Sent Successfully");
 
   } catch (error) {
     console.error("Email Error:", error);
